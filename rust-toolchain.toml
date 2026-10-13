@@ -1,0 +1,5 @@
+[toolchain]
+# channel    = "stable-aarch64-apple-darwin"
+channel    = "nightly"
+components = ["rust-src"]
+targets = ["riscv32imc-unknown-none-elf"]
