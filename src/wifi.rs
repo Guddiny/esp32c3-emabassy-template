@@ -25,7 +25,7 @@ pub async fn start_wifi(spawner: Spawner, peripherals_wifi: WIFI<'static>) -> St
             .expect("Failed to initialize Wi-Fi controller");
     let wifi_interface = esp_radio::wifi::Interface::access_point();
 
-    // Ask for an IP address automatically over DHCP, the way a laptop does when
+    // Ask for an IP address automatically over DHCP, the way a PC does when
     // it joins a network.
     let net_config = embassy_net::Config::ipv4_static(StaticConfigV4 {
         address: embassy_net::Ipv4Cidr::new(ap_ip, 24),
@@ -33,8 +33,8 @@ pub async fn start_wifi(spawner: Spawner, peripherals_wifi: WIFI<'static>) -> St
         dns_servers: Default::default(),
     });
 
-    // The TCP/IP stack wants a random seed (used for things like initial
-    // sequence numbers). Build a 64-bit seed from the hardware random generator.
+    // The TCP/IP stack wants a random seed (used for things like initial sequence numbers).
+    // Build a 64-bit seed from the hardware random generator.
     let rng = esp_hal::rng::Rng::new();
     let seed = (rng.random() as u64) << 32 | (rng.random() as u64);
 
