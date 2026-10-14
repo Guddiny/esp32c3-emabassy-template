@@ -1,18 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>my_c3new</title>
 	<link href="./style.css" rel="stylesheet">
 </head>
+
 <body>
-<main>
-	<h1>my_c3new</h1>
-	<p>
-		The Web Server is working well.
-	</p>
-</main>
-<script src="./main.js"></script>
+	<main>
+		<h1>ESP32 WebSocket Client</h1>
+		<p>Status: <span id="status" class="status disconnected">Disconnected</span></p>
+
+		<div>
+			<input type="text" id="message-input" placeholder="Type a message..." disabled>
+			<button id="send-button" disabled>Send</button>
+		</div>
+
+		<h3>Received Messages:</h3>
+		<div id="log"></div>
+	</main>
+	<script src="./main.js"></script>
 </body>
+
 </html>

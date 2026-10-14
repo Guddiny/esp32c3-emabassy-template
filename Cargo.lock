@@ -345,6 +345,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
+
+[[package]]
 name = "defmt"
 version = "0.3.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1536,6 +1542,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
+name = "lhash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "744a4c881f502e98c2241d2e5f50040ac73b30194d64452bb6260393b53f0dc9"
+
+[[package]]
 name = "libc"
 version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1713,12 +1725,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59fb416fcd483bf1db5aa8d90506aa6967b9d0128e2646a929538d24d117433e"
 dependencies = [
  "const-sha1",
+ "data-encoding",
  "embassy-net",
  "embassy-time",
  "embedded-io-async 0.7.0",
  "futures-util",
  "heapless 0.8.0",
  "heapless 0.9.3",
+ "lhash",
  "picoserve_derive",
  "pin-project",
  "serde",

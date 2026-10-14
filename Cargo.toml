@@ -47,7 +47,7 @@ esp-radio = { version = "1.0.0-beta.1", features = [
   "unstable",
   "wifi",
 ] }
-picoserve = { version = "0.20.1", features = ["embassy"] }
+picoserve = { version = "0.20.1", features = ["embassy", "ws"] }
 esp-hal-dhcp-server = "0.4.0"
 
 critical-section = "1.2.0"
