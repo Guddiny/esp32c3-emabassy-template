@@ -53,7 +53,10 @@ async fn rf_sensor_task(
     let mut radio = match Cc1101::new(spi, gdo0, gdo2).await {
         Ok(radio) => radio,
         Err(e) => {
-            error!("CC1101 initialization failed: {:?}", defmt::Debug2Format(&e));
+            error!(
+                "CC1101 initialization failed: {:?}",
+                defmt::Debug2Format(&e)
+            );
             return;
         }
     };

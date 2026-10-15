@@ -92,8 +92,8 @@ async fn wifi_task(mut controller: esp_radio::wifi::WifiController<'static>) {
             .wait_for_access_point_connected_event_async()
             .await
         {
-            Ok(EventInfo::Connected(info)) => info!("Client connected: {:?}", info),
-            Ok(EventInfo::Disconnected(info)) => info!("Client disconnected: {:?}", info),
+            Ok(EventInfo::Connected(info)) => info!("WiFi client connected: {:?}", info),
+            Ok(EventInfo::Disconnected(info)) => info!("WiFi client disconnected: {:?}", info),
             Err(e) => {
                 error!("Wi-Fi event error: {:?}", e);
                 Timer::after(Duration::from_millis(1000)).await;

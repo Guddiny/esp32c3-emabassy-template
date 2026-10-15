@@ -11,11 +11,12 @@ const wsUrl = `ws://${window.location.host}/ws`;
 let socket;
 let reconnectTimer;
 
-// --- Logging Helper ---
+// Logging Helper
 function log(message, isError = false) {
     const time = new Date().toLocaleTimeString();
     const prefix = isError ? '[ERROR]' : '[INFO]';
     logEl.textContent += `${time} ${prefix} ${message}\n`;
+   
     // Auto-scroll to the bottom
     logEl.scrollTop = logEl.scrollHeight;
 }

@@ -9,11 +9,17 @@
 
 use defmt::{error, info};
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer};
+use embassy_futures::select::*;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
-use my_esp::{dhcp_server, led_service, rf_sensor, web_server, wifi, button_service};
+use heapless::String;
+use my_esp::{
+    button_service, dhcp_server, led_service, rf_sensor,
+    shared::{ACTION_CHANNEL, PACKET_CHANNEL, UI_REBUILD_TRIGGER},
+    ui::settings::{Builder, Settings, build},
+    web_server, wifi,
+};
 
 #[panic_handler]
 fn panic(panic_info: &core::panic::PanicInfo) -> ! {
@@ -59,8 +65,54 @@ async fn main(spawner: Spawner) -> ! {
     led_service::start_led_service(spawner, peripherals.GPIO8);
     button_service::start_button_service(spawner, peripherals.GPIO9);
 
+    let mut settings = Settings {
+        led_enabled: true,
+        wifi_ssid: String::try_from("12345678").unwrap_or_default(),
+    };
+
     loop {
-        info!("Main");
-        Timer::after(Duration::from_secs(60)).await;
+        let sender = PACKET_CHANNEL.sender();
+
+        let event = select(ACTION_CHANNEL.receive(), UI_REBUILD_TRIGGER.wait()).await;
+
+        let action = match event {
+            Either::First(e) => Some(e),
+            Either::Second(_) => None,
+        };
+
+        if action.is_some() {
+            info!("ACTION RECEIVED: {}", defmt::Debug2Format(&action));
+        }
+
+        if action.is_none() {
+            info!(
+                "UI_REBUILD_TRIGGER RECEIVED: {}",
+                defmt::Debug2Format(&action)
+            );
+        }
+
+        let mut builder = Builder::new(action);
+        build(&mut builder, &mut settings);
+
+        let mut json = heapless::String::<{ my_esp::config::MAX_PACKET_SIZE }>::new();
+        if serde_json_core::to_string::<_, { my_esp::config::MAX_PACKET_SIZE }>(&builder.packet)
+            .ok()
+            .map(|s| {
+                let _ = json.push_str(&s);
+            })
+            .is_none()
+        {
+            error!("JSON serialize failed");
+            continue;
+        }
+
+        let mut vec = heapless::Vec::<u8, { my_esp::config::MAX_PACKET_SIZE }>::new();
+        if vec.extend_from_slice(json.as_bytes()).is_err() {
+            error!("Packet too large");
+            continue;
+        }
+
+        info!("Publishing packet: {} bytes", vec.len());
+        let _ = sender.send(vec).await;
     }
 }
