@@ -13,11 +13,12 @@ use embassy_futures::select::*;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
-use heapless::String;
+use heapless::{String, Vec};
 use my_esp::{
     button_service, dhcp_server, led_service, rf_sensor,
-    shared::{ACTION_CHANNEL, PACKET_CHANNEL, UI_REBUILD_TRIGGER},
-    ui::settings::{Builder, Settings, build},
+    shared::{ACTION_CHANNEL, PACKET_CHANNEL},
+    state::Settings,
+    ui::funcui::{Alignment, Builder, InputType, REDRAW_UI},
     web_server, wifi,
 };
 
@@ -68,12 +69,16 @@ async fn main(spawner: Spawner) -> ! {
     let mut settings = Settings {
         led_enabled: true,
         wifi_ssid: String::try_from("12345678").unwrap_or_default(),
+
+        min_vol: 1,
+        max_vol: 12,
+        current_vol: 4,
     };
 
     loop {
         let sender = PACKET_CHANNEL.sender();
 
-        let event = select(ACTION_CHANNEL.receive(), UI_REBUILD_TRIGGER.wait()).await;
+        let event = select(ACTION_CHANNEL.receive(), REDRAW_UI.wait()).await;
 
         let action = match event {
             Either::First(e) => Some(e),
@@ -106,6 +111,8 @@ async fn main(spawner: Spawner) -> ! {
             continue;
         }
 
+        info!("{}", &json);
+
         let mut vec = heapless::Vec::<u8, { my_esp::config::MAX_PACKET_SIZE }>::new();
         if vec.extend_from_slice(json.as_bytes()).is_err() {
             error!("Packet too large");
@@ -115,4 +122,70 @@ async fn main(spawner: Spawner) -> ! {
         info!("Publishing packet: {} bytes", vec.len());
         let _ = sender.send(vec).await;
     }
+}
+
+fn build(b: &mut Builder, settings: &mut Settings) {
+    b.tab("Main", false, |b| {
+        b.group("", false, Alignment::Vertical, |b| {
+            b.group("wifi", false, Alignment::Vertical, |b| {
+                b.input(
+                    "SSID",
+                    "SSID",
+                    InputType::Text,
+                    &mut String::try_from("K92_new").unwrap(),
+                );
+                b.input(
+                    "Password",
+                    "Password",
+                    InputType::Password,
+                    &mut String::try_from("123").unwrap(),
+                );
+
+                b.button("Connect", "Connect Btn");
+            });
+
+            b.group("User settings", false, Alignment::Vertical, |b| {
+                b.switch("Echo Mode", &mut true);
+                b.button("Connect", "Connect Btn");
+
+                b.group("Email", false, Alignment::Horizontal, |b| {
+                    b.input(
+                        "Email",
+                        "Email",
+                        InputType::Email,
+                        &mut String::try_from("my@email.com").unwrap(),
+                    );
+                    b.button("Add", "Add Email");
+                });
+            });
+        });
+    })
+    .tab("Settings", false, |b| {
+        b.group("", false, Alignment::Vertical, |b| {
+            b.slider(
+                "Volume2",
+                settings.min_vol,
+                settings.max_vol,
+                &mut settings.current_vol,
+            );
+            b.slider(
+                "Brightness",
+                settings.min_vol,
+                settings.max_vol,
+                &mut settings.current_vol,
+            );
+            b.select("Items", &["OPtion 1", "Option 2", "option 3"], &mut 1);
+            b.progress_bar("Progress bar 1", "Some text", &mut 0);
+            b.progress_bar("Progress bar 2", "Some text", &mut 50);
+            b.progress_ring("Progress bar 2", &mut true);
+        });
+    })
+    .tab("Logs", false, |b| {
+        b.group("", false, Alignment::Vertical, |b| {
+            b.group("", false, Alignment::Horizontal, |b| {
+                b.label("", String::try_from("Logs").as_mut().unwrap());
+                b.button("Clear", "Clear btn");
+            });
+        });
+    });
 }

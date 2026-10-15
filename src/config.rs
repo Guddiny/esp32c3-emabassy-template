@@ -12,4 +12,4 @@ pub const MAX_CONCURRENT_WEBSOCKETS: usize = 2;
 pub const HEADROOM: usize = 1;
 pub const WEB_STACK_SIZE: usize =
     WEB_TASK_POOL_SIZE + DHCP_SOCKET_SIZE + MAX_CONCURRENT_WEBSOCKETS + HEADROOM;
-pub const MAX_PACKET_SIZE: usize = 2048;
+pub const MAX_PACKET_SIZE: usize = 1024*4;

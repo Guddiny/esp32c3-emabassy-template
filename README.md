@@ -181,3 +181,15 @@ sequenceDiagram
     deactivate W
     Note over W: subscriber автоматически<br/>отписывается от PACKET_BUS
 ```
+
+```mermaid
+sequenceDiagram
+    TASK->>APP-STATE: Update global app state
+    TASK->>REDROW_UI: Shedule UI rebuild
+    REDROW_UI->>MAIN-TASK: Receive  signal
+    APP-STATE->>MAIN-TASK: Read global app state
+    MAIN-TASK->>MAIN-TASK: Build UI packet
+    MAIN-TASK->>PACKET-CHANNEL: Send packent to channel
+    PACKET-CHANNEL->>WEB_SERVER: Read UI packent
+    WEB_SERVER->>WS: Send packet to WebSocket Client
+```

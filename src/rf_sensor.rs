@@ -10,11 +10,15 @@ use esp_hal::{
     peripherals::{GPIO4, GPIO10, GPIO12, SPI2},
     spi::master::{Config, Spi},
 };
+use heapless::String;
 use static_cell::StaticCell;
+
+use crate::state::Settings;
 
 type RadioSpiBus = Spi<'static, Async>;
 
 static RADIO_SPI_BUS: StaticCell<Mutex<NoopRawMutex, RadioSpiBus>> = StaticCell::new();
+static SETTINGS: StaticCell<Settings> = StaticCell::new();
 
 pub fn start_rf_sensor(
     spawner: Spawner,
@@ -31,7 +35,15 @@ pub fn start_rf_sensor(
     let gdo0 = Input::new(gdo0_pin, InputConfig::default());
     let gdo2 = Input::new(gdo2_pin, InputConfig::default());
 
-    spawner.spawn(rf_sensor_task(spi_bus, cs_pin, gdo0, gdo2).unwrap());
+    let settings: &mut Settings = SETTINGS.init(Settings {
+        led_enabled: false,
+        wifi_ssid: String::try_from("123").unwrap(),
+        min_vol: 1,
+        max_vol: 12,
+        current_vol: 5,
+    });
+
+    spawner.spawn(rf_sensor_task(spi_bus, cs_pin, gdo0, gdo2, settings).unwrap());
 }
 
 #[embassy_executor::task]
@@ -40,6 +52,7 @@ async fn rf_sensor_task(
     cs_pin: Output<'static>,
     gdo0: Input<'static>,
     gdo2: Input<'static>,
+    settings: &'static mut Settings,
 ) {
     let config = RadioConfig::new()
         .frequency_hz(433_920_000)
