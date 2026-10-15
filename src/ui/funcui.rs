@@ -1,7 +1,7 @@
+use defmt::error;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use heapless::{String, Vec};
 use serde::{Deserialize, Serialize};
-use defmt::{error};
 
 pub static REDRAW_UI: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 pub const PARENT_STACK_SIZE: usize = 100;
@@ -13,6 +13,7 @@ pub struct Action {
     pub value: String<64>,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Serialize)]
 #[serde(tag = "type")]
 pub enum Widget {
@@ -22,6 +23,7 @@ pub enum Widget {
         parent_id: u32,
         label: String<32>,
         value: bool,
+        trigger_update: bool,
     },
     #[serde(rename = "indicator")]
     Indicator {
@@ -38,6 +40,7 @@ pub enum Widget {
         min: u8,
         max: u8,
         value: u8,
+        trigger_update: bool,
     },
     #[serde(rename = "input")]
     Input {
@@ -47,6 +50,7 @@ pub enum Widget {
         placeholder: String<32>,
         value: String<32>,
         input_type: InputType,
+        trigger_update: bool,
     },
     #[serde(rename = "button")]
     Button {
@@ -54,6 +58,7 @@ pub enum Widget {
         parent_id: u32,
         label: String<32>,
         value: String<32>,
+        trigger_update: bool,
     },
     #[serde(rename = "label")]
     Label {
@@ -61,8 +66,9 @@ pub enum Widget {
         parent_id: u32,
         label: String<32>,
         text: String<32>,
+        trigger_update: bool,
     },
-    #[serde(rename = "progressbar")]
+    #[serde(rename = "progress_bar")]
     ProgressBar {
         id: u32,
         parent_id: u32,
@@ -84,6 +90,7 @@ pub enum Widget {
         label: String<32>,
         selected_index: u8,
         options: heapless::Vec<String<32>, MAX_SELECT_OPTIONS>,
+        trigger_update: bool,
     },
     #[serde(rename = "log")]
     Log {
@@ -145,9 +152,10 @@ pub enum NotificationKind {
     Error,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub enum InputType {
     #[serde(rename = "text")]
+    #[default]
     Text,
     #[serde(rename = "password")]
     Password,
@@ -157,9 +165,15 @@ pub enum InputType {
     Email,
 }
 
-impl Default for InputType {
-    fn default() -> Self {
-        InputType::Text
+impl Widget {
+    pub fn notify_on_change(&mut self) {
+        match self {
+            Widget::Toggle { trigger_update, .. }
+            | Widget::Slider { trigger_update, .. }
+            | Widget::Input { trigger_update, .. }
+            | Widget::Select { trigger_update, .. } => *trigger_update = true,
+            _ => (),
+        }
     }
 }
 
@@ -246,7 +260,7 @@ impl Builder {
 
         // Push to stack
         if self.parent_stack.push(id).is_err() {
-           error!("Parent stack overflow, on id {}", id);
+            error!("Parent stack overflow, on id {}", id);
         }
 
         // Execute the nested builder calls
@@ -264,7 +278,7 @@ impl Builder {
         id
     }
 
-    pub fn switch(&mut self, label: &str, value: &mut bool) -> bool {
+    pub fn toggle(&mut self, label: &str, value: &mut bool) -> &mut Widget {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::Toggle {
@@ -272,6 +286,7 @@ impl Builder {
             label: String::try_from(label).unwrap_or_default(),
             value: *value,
             parent_id: self.current_parent(),
+            trigger_update: false,
         });
 
         if let Some(ref act) = self.action
@@ -280,13 +295,12 @@ impl Builder {
         {
             *value = v;
             self.changed = true;
-            return true;
         }
 
-        false
+        self.packet.last_mut().expect("just pushed a widget")
     }
 
-    pub fn button(&mut self, label: &str, value: &str) -> bool {
+    pub fn button(&mut self, label: &str, value: &str) {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::Button {
@@ -294,19 +308,17 @@ impl Builder {
             parent_id: self.current_parent(),
             label: String::try_from(label).unwrap_or_default(),
             value: String::try_from(value).unwrap_or_default(),
+            trigger_update: true,
         });
 
         if let Some(ref act) = self.action
             && act.id == id
         {
             self.changed = true;
-            return true;
         }
-
-        false
     }
 
-    pub fn slider(&mut self, label: &str, min: u8, max: u8, value: &mut u8) -> &mut Self {
+    pub fn slider(&mut self, label: &str, min: u8, max: u8, value: &mut u8) -> &mut Widget {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::Slider {
@@ -316,6 +328,7 @@ impl Builder {
             min,
             max,
             value: *value,
+            trigger_update: false,
         });
 
         if let Some(ref action) = self.action
@@ -326,7 +339,7 @@ impl Builder {
             self.changed = true;
         }
 
-        self
+        self.packet.last_mut().expect("just pushed a widget")
     }
 
     pub fn input(
@@ -335,7 +348,7 @@ impl Builder {
         placeholder: &str,
         input_type: InputType,
         value: &mut String<32>,
-    ) -> &mut Self {
+    ) -> &mut Widget {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::Input {
@@ -345,20 +358,26 @@ impl Builder {
             value: String::try_from(value.as_str()).unwrap_or_default(),
             placeholder: String::try_from(placeholder).unwrap_or_default(),
             input_type,
+            trigger_update: false,
         });
 
         if let Some(ref action) = self.action
             && action.id == id
         {
             value.clear();
-            value.push_str(&action.value.as_str()).unwrap();
+            value.push_str(action.value.as_str()).unwrap();
             self.changed = true;
         }
 
-        self
+        self.packet.last_mut().expect("just pushed a widget")
     }
 
-    pub fn select(&mut self, label: &str, options: &[&str], selected_index: &mut u8) -> &mut Self {
+    pub fn select(
+        &mut self,
+        label: &str,
+        options: &[&str],
+        selected_index: &mut u8,
+    ) -> &mut Widget {
         let id = self.next_id();
         let mut opts: Vec<String<32>, MAX_SELECT_OPTIONS> = Vec::new();
         for &opt in options.iter().take(MAX_SELECT_OPTIONS) {
@@ -376,26 +395,27 @@ impl Builder {
             label: String::try_from(label).unwrap(),
             selected_index: *selected_index,
             options: opts,
+            trigger_update: false,
         });
 
-        if let Some(ref act) = self.action {
-            if act.id == id {
-                let raw = act.value.as_str();
+        if let Some(ref act) = self.action
+            && act.id == id
+        {
+            let raw = act.value.as_str();
 
-                match raw.parse::<u8>() {
-                    Ok(new_selected_index) => {
-                        *selected_index = new_selected_index;
-                        self.changed = true;
-                    }
-                    Err(_) => todo!(),
+            match raw.parse::<u8>() {
+                Ok(new_selected_index) => {
+                    *selected_index = new_selected_index;
+                    self.changed = true;
                 }
+                Err(_) => todo!(),
             }
         }
 
-        self
+        self.packet.last_mut().expect("just pushed a widget")
     }
 
-    pub fn indicator(&mut self, label: &str, enabled: &mut bool) -> &mut Self {
+    pub fn indicator(&mut self, label: &str, enabled: &mut bool) {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::Indicator {
@@ -405,40 +425,40 @@ impl Builder {
             enabled: *enabled,
         });
 
-        if let Some(ref act) = self.action {
-            if act.id == id
-                && let Ok(v) = act.value.as_str().parse::<bool>()
-            {
-                *enabled = v;
-            }
+        if let Some(ref act) = self.action
+            && act.id == id
+            && let Ok(v) = act.value.as_str().parse::<bool>()
+        {
+            *enabled = v;
         }
-
-        self
     }
 
-    pub fn progress_bar(&mut self, label: &str, text: &str, progress: &mut u8) -> &mut Self {
+    pub fn progress_bar(&mut self, label: &str, text: &str, progress: &mut u8) {
         let id = self.next_id();
 
-        let _ = self.packet.push(Widget::ProgressBar {
-            id,
-            parent_id: self.current_parent(),
-            label: String::try_from(label).unwrap(),
-            text: String::try_from(text).unwrap(),
-            progress: *progress,
-        });
-
-        if let Some(ref act) = self.action {
-            if act.id == id
-                && let Ok(v) = act.value.as_str().parse::<u8>()
-            {
-                *progress = v;
-            }
+        if self
+            .packet
+            .push(Widget::ProgressBar {
+                id,
+                parent_id: self.current_parent(),
+                label: String::try_from(label).unwrap(),
+                text: String::try_from(text).unwrap(),
+                progress: *progress,
+            })
+            .is_err()
+        {
+            error!("Fail to push widget, looks like the packet is full");
         }
 
-        self
+        if let Some(ref act) = self.action
+            && act.id == id
+            && let Ok(v) = act.value.as_str().parse::<u8>()
+        {
+            *progress = v;
+        }
     }
 
-    pub fn progress_ring(&mut self, label: &str, in_progress: &mut bool) -> &mut Self {
+    pub fn progress_ring(&mut self, label: &str, in_progress: &mut bool) {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::ProgressRing {
@@ -448,18 +468,15 @@ impl Builder {
             in_progress: *in_progress,
         });
 
-        if let Some(ref act) = self.action {
-            if act.id == id
-                && let Ok(v) = act.value.as_str().parse::<bool>()
-            {
-                *in_progress = v;
-            }
+        if let Some(ref act) = self.action
+            && act.id == id
+            && let Ok(v) = act.value.as_str().parse::<bool>()
+        {
+            *in_progress = v;
         }
-
-        self
     }
 
-    pub fn log(&mut self, label: &str, log: &str) -> &mut Self {
+    pub fn log(&mut self, label: &str, log: &str) {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::Log {
@@ -468,11 +485,9 @@ impl Builder {
             label: String::try_from(label).unwrap(),
             text: String::try_from(log).unwrap(),
         });
-
-        self
     }
 
-    pub fn label(&mut self, label: &str, text: &mut String<32>) -> &mut Self {
+    pub fn label(&mut self, label: &str, text: &mut String<32>) {
         let id = self.next_id();
 
         let _ = self.packet.push(Widget::Label {
@@ -480,16 +495,15 @@ impl Builder {
             parent_id: self.current_parent(),
             label: String::try_from(label).unwrap(),
             text: String::try_from(text.as_str()).unwrap(),
+            trigger_update: false,
         });
 
         if let Some(ref action) = self.action
             && action.id == id
         {
             text.clear();
-            text.push_str(&action.value.as_str()).unwrap();
+            text.push_str(action.value.as_str()).unwrap();
             self.changed = true;
         }
-
-        self
     }
 }

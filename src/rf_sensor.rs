@@ -2,12 +2,15 @@ use cc1101_embassy::{Cc1101, Modulation, RadioConfig, TxPower};
 use defmt::{error, info};
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::Spawner;
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
+    mutex::Mutex,
+};
 use embassy_time::{Duration, Timer};
 use esp_hal::{
     Async,
     gpio::{Input, InputConfig, Level, Output, OutputConfig},
-    peripherals::{GPIO4, GPIO10, GPIO12, SPI2},
+    peripherals::{GPIO0, GPIO4, GPIO10, SPI2},
     spi::master::{Config, Spi},
 };
 use heapless::String;
@@ -17,16 +20,23 @@ use crate::state::Settings;
 
 type RadioSpiBus = Spi<'static, Async>;
 
-static RADIO_SPI_BUS: StaticCell<Mutex<NoopRawMutex, RadioSpiBus>> = StaticCell::new();
+static RADIO_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, RadioSpiBus>> = StaticCell::new();
 static SETTINGS: StaticCell<Settings> = StaticCell::new();
 
 pub fn start_rf_sensor(
     spawner: Spawner,
     spi_peripheral: SPI2<'static>,
-    cs_pin: GPIO4<'static>,
-    gdo0_pin: GPIO10<'static>,
-    gdo2_pin: GPIO12<'static>,
+    cs_pin: GPIO10<'static>,
+    gdo0_pin: GPIO4<'static>,
+    gdo2_pin: GPIO0<'static>,
 ) {
+    // #define SS_CS_PIN 10
+    // #define SCK_PIN 6
+    // #define MOSI_PIN 7
+    // #define MISO_PIN 2
+    // #define GD0 4
+    // #define GD2 0
+
     let spi = Spi::new(spi_peripheral, Config::default())
         .unwrap()
         .into_async();
@@ -48,7 +58,7 @@ pub fn start_rf_sensor(
 
 #[embassy_executor::task]
 async fn rf_sensor_task(
-    spi_bus: &'static Mutex<NoopRawMutex, RadioSpiBus>,
+    spi_bus: &'static Mutex<CriticalSectionRawMutex, RadioSpiBus>,
     cs_pin: Output<'static>,
     gdo0: Input<'static>,
     gdo2: Input<'static>,

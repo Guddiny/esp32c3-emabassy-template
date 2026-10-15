@@ -59,9 +59,9 @@ async fn main(spawner: Spawner) -> ! {
     rf_sensor::start_rf_sensor(
         spawner,
         peripherals.SPI2,
-        peripherals.GPIO4,
         peripherals.GPIO10,
-        peripherals.GPIO12,
+        peripherals.GPIO4,
+        peripherals.GPIO0,
     );
     led_service::start_led_service(spawner, peripherals.GPIO8);
     button_service::start_button_service(spawner, peripherals.GPIO9);
@@ -145,7 +145,7 @@ fn build(b: &mut Builder, settings: &mut Settings) {
             });
 
             b.group("User settings", false, Alignment::Vertical, |b| {
-                b.switch("Echo Mode", &mut true);
+                b.toggle("Echo Mode", &mut true).notify_on_change();
                 b.button("Connect", "Connect Btn");
 
                 b.group("Email", false, Alignment::Horizontal, |b| {
