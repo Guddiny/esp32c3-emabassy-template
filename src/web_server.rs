@@ -30,18 +30,6 @@ impl AppBuilder for AppProps {
                 ))),
             )
             .route(
-                "/style.css",
-                get_service(picoserve::response::File::css(include_str!(
-                    "web/style.css"
-                ))),
-            )
-            .route(
-                "/main.js",
-                get_service(picoserve::response::File::javascript(include_str!(
-                    "web/main.js"
-                ))),
-            )
-            .route(
                 "/ws",
                 get(|upgrade: WebSocketUpgrade| async move { upgrade.on_upgrade(EchoWebSocket) }),
             )
