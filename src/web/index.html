@@ -440,6 +440,24 @@
             font-size: 13px;
             box-shadow: var(--shadow-hover);
             animation: slidein 0.2s ease;
+            max-width: min(100vw - 32px, 480px);
+            word-break: break-word;
+        }
+        .toast.toast-info {
+            background: var(--primary);
+            color: #fff;
+        }
+        .toast.toast-success {
+            background: #22c55e;
+            color: #fff;
+        }
+        .toast.toast-warning {
+            background: #f59e0b;
+            color: #111;
+        }
+        .toast.toast-error {
+            background: #ef4444;
+            color: #fff;
         }
         @keyframes slidein {
             from {
@@ -520,12 +538,14 @@
             ((dom.status.className = `status ${e}`),
                 (dom.status.textContent = t));
         }
-        function toast(e, t = 2500) {
-            const n = document.createElement("div");
-            ((n.className = "toast"),
-                (n.textContent = e),
-                dom.toasts.appendChild(n),
-                setTimeout(() => n.remove(), t));
+        function toast(text, kind = "info", duration = 3000) {
+            const allowed = ["info", "success", "warning", "error"];
+            const k = allowed.includes(kind) ? kind : "info";
+            const el = document.createElement("div");
+            el.className = `toast toast-${k}`;
+            el.textContent = String(text ?? "");
+            dom.toasts.appendChild(el);
+            setTimeout(() => el.remove(), duration);
         }
         function sendAction(e, t) {
             !1 !== e.trigger_update
@@ -560,6 +580,16 @@
                         try {
                             const msg = JSON.parse(event.data);
 
+                            if (
+                                msg &&
+                                msg.notification &&
+                                typeof msg.notification === "object"
+                            ) {
+                                const { kind, message } = msg.notification;
+                                toast(String(message ?? ""), kind ?? "info");
+                                return;
+                            }
+
                             if (msg && Array.isArray(msg.data)) {
                                 render(msg.data);
                                 return;
@@ -571,7 +601,7 @@
                             }
 
                             if (msg && msg.error) {
-                                toast(msg.error);
+                                toast(msg.error, "error");
                                 return;
                             }
 

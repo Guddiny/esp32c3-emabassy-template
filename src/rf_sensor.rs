@@ -87,7 +87,10 @@ async fn rf_sensor_task(
     loop {
         info!("Sensor task");
 
-        let n = Notification::new(NotificationKind::Info, "123");
+        let n = Notification::new(
+            NotificationKind::Error,
+            "Some error during device RF sensor",
+        );
         let p = crate::notifications::OutboundPackage::Notification(&n);
         Notification::publish(&p).await;
 

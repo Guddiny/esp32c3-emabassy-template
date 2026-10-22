@@ -40,7 +40,7 @@ pub struct Notification {
     #[serde(rename = "kind")]
     pub kind: NotificationKind,
     #[serde(rename = "message")]
-    pub message: String<32>,
+    pub message: String<64>,
 }
 
 #[derive(Serialize)]
