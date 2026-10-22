@@ -9,11 +9,19 @@
 
 use defmt::{error, info};
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer};
+use embassy_futures::select::*;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
-use my_esp::{dhcp_server, led_service, rf_sensor, web_server, wifi, button_service};
+use heapless::String;
+use my_esp::notifications::OutboundPackage;
+use my_esp::{
+    button_service, dhcp_server, led_service, rf_sensor,
+    shared::ACTION_CHANNEL,
+    state::Settings,
+    ui::funcui::{Alignment, Builder, InputType, REDRAW_UI},
+    web_server, wifi,
+};
 
 #[panic_handler]
 fn panic(panic_info: &core::panic::PanicInfo) -> ! {
@@ -52,15 +60,109 @@ async fn main(spawner: Spawner) -> ! {
     rf_sensor::start_rf_sensor(
         spawner,
         peripherals.SPI2,
-        peripherals.GPIO4,
         peripherals.GPIO10,
-        peripherals.GPIO12,
+        peripherals.GPIO4,
+        peripherals.GPIO0,
     );
     led_service::start_led_service(spawner, peripherals.GPIO8);
     button_service::start_button_service(spawner, peripherals.GPIO9);
 
+    let mut settings = Settings {
+        led_enabled: true,
+        wifi_ssid: String::try_from("12345678").unwrap_or_default(),
+
+        min_vol: 1,
+        max_vol: 12,
+        current_vol: 4,
+    };
+
     loop {
-        info!("Main");
-        Timer::after(Duration::from_secs(60)).await;
+        let event = select(ACTION_CHANNEL.receive(), REDRAW_UI.wait()).await;
+
+        let action = match event {
+            Either::First(e) => Some(e),
+            Either::Second(_) => None,
+        };
+
+        if action.is_some() {
+            info!("ACTION RECEIVED: {}", defmt::Debug2Format(&action));
+        }
+
+        if action.is_none() {
+            info!(
+                "UI_REBUILD_TRIGGER RECEIVED: {}",
+                defmt::Debug2Format(&action)
+            );
+        }
+
+        let mut builder = Builder::new(action);
+        build(&mut builder, &mut settings);
+
+        let pkg = OutboundPackage::Data(builder.packet.as_slice());
+
+        my_esp::notifications::Notification::publish(&pkg).await;
     }
+}
+
+fn build(b: &mut Builder, settings: &mut Settings) {
+    b.tab("Main", false, |b| {
+        b.group("", false, Alignment::Vertical, |b| {
+            b.group("wifi", false, Alignment::Vertical, |b| {
+                b.input(
+                    "SSID",
+                    "SSID",
+                    InputType::Text,
+                    &mut String::try_from("K92_new").unwrap(),
+                );
+                b.input(
+                    "Password",
+                    "Password",
+                    InputType::Password,
+                    &mut String::try_from("123").unwrap(),
+                );
+
+                b.button("Connect", "Connect Btn");
+            });
+
+            b.group("User settings", false, Alignment::Vertical, |b| {
+                b.toggle("Echo Mode", &mut true).notify_on_change();
+                b.button("Connect", "Connect Btn");
+
+                b.group("Email", false, Alignment::Horizontal, |b| {
+                    b.input(
+                        "Email",
+                        "Email",
+                        InputType::Email,
+                        &mut String::try_from("my@email.com").unwrap(),
+                    );
+                    b.button("Add", "Add Email");
+                });
+            });
+        });
+    })
+    .tab("Settings", false, |b| {
+        b.group("", false, Alignment::Vertical, |b| {
+            b.slider(
+                "Volume2",
+                settings.min_vol,
+                settings.max_vol,
+                &mut settings.current_vol,
+            );
+            b.slider(
+                "Brightness",
+                settings.min_vol,
+                settings.max_vol,
+                &mut settings.current_vol,
+            );
+            b.select("Items", &["OPtion 1", "Option 2", "option 3"], &mut 1);
+            b.progress_bar("Progress bar 1", "Some text", &mut 0);
+            b.progress_bar("Progress bar 2", "Some text", &mut 50);
+            b.progress_ring("Progress bar 2", &mut true);
+        });
+    })
+    .tab("Logs", false, |b| {
+        b.group("", false, Alignment::Vertical, |b| {
+            b.log("", "");
+        });
+    });
 }

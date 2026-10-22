@@ -1,13 +1,18 @@
-use defmt::info;
+use defmt::{error, info};
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::Duration;
+use picoserve::futures::Either as WsEither;
+use picoserve::response::WebSocketUpgrade;
+use picoserve::response::ws::{Message, SocketRx, SocketTx, WebSocketCallback};
 use picoserve::{
     AppBuilder, AppRouter, Server, make_static,
-    routing::{PathRouter, get_service},
+    routing::{PathRouter, get, get_service},
 };
 
 use crate::config;
+use crate::shared::*;
+use crate::ui::funcui::REDRAW_UI;
 
 const WEB_TASK_POOL_SIZE: usize = config::WEB_TASK_POOL_SIZE;
 
@@ -25,14 +30,8 @@ impl AppBuilder for AppProps {
                 ))),
             )
             .route(
-                "/style.css",
-                get_service(picoserve::response::File::html(include_str!(
-                    "web/style.css"
-                ))),
-            )
-            .route(
-                "/main.js",
-                get_service(picoserve::response::File::html(include_str!("web/main.js"))),
+                "/ws",
+                get(|upgrade: WebSocketUpgrade| async move { upgrade.on_upgrade(EchoWebSocket) }),
             )
     }
 }
@@ -82,4 +81,63 @@ async fn web_task(
             &mut tcp_tx_buffer,
         )
         .await;
+}
+
+pub struct EchoWebSocket;
+
+impl WebSocketCallback for EchoWebSocket {
+    async fn run<R: embedded_io_async::Read, W: picoserve::io::Write<Error = R::Error>>(
+        self,
+        mut rx: SocketRx<R>,
+        mut tx: SocketTx<W>,
+    ) -> Result<(), W::Error> {
+        let mut buffer = [0u8; 1024];
+        let tx_packages_receiver = PACKET_CHANNEL.receiver();
+
+        // This code runs for every WS connection
+        info!("WS Connected");
+        REDRAW_UI.signal(());
+
+        loop {
+            // `core::future::pending()` is a future that never resolves.
+            // It's used here because we don't need a cancellation signal.
+
+            // TODO it looks messy - it should be rewritten but no idea how
+            match rx
+                .next_message(&mut buffer, tx_packages_receiver.receive())
+                .await
+            {
+                Ok(WsEither::First(Ok(message))) => match message {
+                    Message::Text(text) => {
+                        info!("Text Message Received {}", text);
+                        REDRAW_UI.signal(());
+                    }
+                    Message::Binary(_) => {}
+                    Message::Close(reason) => {
+                        info!("WS Connection closed: {}", reason);
+                        break;
+                    }
+                    Message::Ping(data) => {
+                        tx.send_pong(data).await?;
+                        info!("WS Ping");
+                    }
+                    Message::Pong(_) => {}
+                },
+                Ok(WsEither::First(Err(e))) => {
+                    error!("WE: {:?}", defmt::Debug2Format(&e));
+                    break;
+                }
+                Ok(WsEither::Second(packet)) => {
+                    tx.send_text(core::str::from_utf8(&packet).unwrap_or("[]"))
+                        .await?;
+                }
+                Err(e) => {
+                    error!("WE: {:?}", defmt::Debug2Format(&e));
+                    break;
+                }
+            };
+        }
+
+        Ok(())
+    }
 }
