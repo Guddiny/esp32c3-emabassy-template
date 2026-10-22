@@ -1,5 +1,5 @@
-use cc1101_embassy::{Modulation, RadioConfig, TxPower};
-use defmt::info;
+use cc1101_embassy::{Cc1101, Modulation, RadioConfig, TxPower};
+use defmt::{error, info};
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
@@ -60,7 +60,7 @@ async fn rf_sensor_task(
     cs_pin: Output<'static>,
     gdo0: Input<'static>,
     gdo2: Input<'static>,
-    settings: &'static mut Settings,
+    _settings: &'static mut Settings,
 ) {
     let config = RadioConfig::new()
         .frequency_hz(433_920_000)
@@ -69,20 +69,20 @@ async fn rf_sensor_task(
         .tx_power(TxPower::Dbm0);
 
     let spi = SpiDevice::new(spi_bus, cs_pin);
-    // let mut radio = Cc1101::new(spi, gdo0, gdo2).await.unwrap();
+    //let mut radio = Cc1101::new(spi, gdo0, gdo2).await.unwrap();
 
-    // let mut radio = match Cc1101::new(spi, gdo0, gdo2).await {
-    //     Ok(radio) => radio,
-    //     Err(e) => {
-    //         error!(
-    //             "CC1101 initialization failed: {:?}",
-    //             defmt::Debug2Format(&e)
-    //         );
-    //         return;
-    //     }
-    // };
+    let mut radio = match Cc1101::new(spi, gdo0, gdo2).await {
+        Ok(radio) => radio,
+        Err(e) => {
+            error!(
+                "CC1101 initialization failed: {:?}",
+                defmt::Debug2Format(&e)
+            );
+            return;
+        }
+    };
 
-    // radio.configure(&config).await.unwrap();
+    radio.configure(&config).await.unwrap();
 
     loop {
         info!("Sensor task");
