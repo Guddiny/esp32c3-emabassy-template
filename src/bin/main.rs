@@ -13,10 +13,11 @@ use embassy_futures::select::*;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
-use heapless::{String, Vec};
+use heapless::String;
+use my_esp::notifications::OutboundPackage;
 use my_esp::{
     button_service, dhcp_server, led_service, rf_sensor,
-    shared::{ACTION_CHANNEL, PACKET_CHANNEL},
+    shared::ACTION_CHANNEL,
     state::Settings,
     ui::funcui::{Alignment, Builder, InputType, REDRAW_UI},
     web_server, wifi,
@@ -76,8 +77,6 @@ async fn main(spawner: Spawner) -> ! {
     };
 
     loop {
-        let sender = PACKET_CHANNEL.sender();
-
         let event = select(ACTION_CHANNEL.receive(), REDRAW_UI.wait()).await;
 
         let action = match event {
@@ -99,28 +98,9 @@ async fn main(spawner: Spawner) -> ! {
         let mut builder = Builder::new(action);
         build(&mut builder, &mut settings);
 
-        let mut json = heapless::String::<{ my_esp::config::MAX_PACKET_SIZE }>::new();
-        if serde_json_core::to_string::<_, { my_esp::config::MAX_PACKET_SIZE }>(&builder.packet)
-            .ok()
-            .map(|s| {
-                let _ = json.push_str(&s);
-            })
-            .is_none()
-        {
-            error!("JSON serialize failed");
-            continue;
-        }
+        let pkg = OutboundPackage::Data(builder.packet.as_slice());
 
-        info!("{}", &json);
-
-        let mut vec = heapless::Vec::<u8, { my_esp::config::MAX_PACKET_SIZE }>::new();
-        if vec.extend_from_slice(json.as_bytes()).is_err() {
-            error!("Packet too large");
-            continue;
-        }
-
-        info!("Publishing packet: {} bytes", vec.len());
-        let _ = sender.send(vec).await;
+        my_esp::notifications::Notification::publish(&pkg).await;
     }
 }
 

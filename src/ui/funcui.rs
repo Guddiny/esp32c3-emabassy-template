@@ -3,9 +3,9 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal}
 use heapless::{String, Vec};
 use serde::{Deserialize, Serialize};
 
+use crate::config;
+
 pub static REDRAW_UI: Signal<CriticalSectionRawMutex, ()> = Signal::new();
-pub const PARENT_STACK_SIZE: usize = 100;
-pub const MAX_SELECT_OPTIONS: usize = 20;
 
 #[derive(Deserialize, Debug)]
 pub struct Action {
@@ -89,7 +89,7 @@ pub enum Widget {
         parent: u32,
         label: String<32>,
         selected_index: u8,
-        options: heapless::Vec<String<32>, MAX_SELECT_OPTIONS>,
+        options: heapless::Vec<String<32>, { config::MAX_SELECT_OPTIONS }>,
         trigger_update: bool,
     },
     #[serde(rename = "log")]
@@ -98,13 +98,6 @@ pub enum Widget {
         parent_id: u32,
         label: String<32>,
         text: String<64>,
-    },
-    #[serde(rename = "notification")]
-    Notification {
-        id: u32,
-        parent_id: u32,
-        kind: NotificationKind,
-        message: String<32>,
     },
     #[serde(rename = "group")]
     Group {
@@ -141,17 +134,6 @@ enum GroupWidgetKind {
     Tab,
 }
 
-#[derive(Serialize)]
-#[serde(tag = "notification_kind")]
-pub enum NotificationKind {
-    #[serde(rename = "info")]
-    Info,
-    #[serde(rename = "warning")]
-    Warning,
-    #[serde(rename = "error")]
-    Error,
-}
-
 #[derive(Serialize, Default)]
 pub enum InputType {
     #[serde(rename = "text")]
@@ -180,9 +162,9 @@ impl Widget {
 pub struct Builder {
     pub action: Option<Action>,
     next_id: u32,
-    pub packet: Vec<Widget, PARENT_STACK_SIZE>,
+    pub packet: Vec<Widget, { config::MAX_WIDGETS }>,
     pub changed: bool,
-    parent_stack: Vec<u32, PARENT_STACK_SIZE>,
+    parent_stack: Vec<u32, { config::MAX_UI_DEPTH }>,
 }
 
 impl Builder {
@@ -379,8 +361,8 @@ impl Builder {
         selected_index: &mut u8,
     ) -> &mut Widget {
         let id = self.next_id();
-        let mut opts: Vec<String<32>, MAX_SELECT_OPTIONS> = Vec::new();
-        for &opt in options.iter().take(MAX_SELECT_OPTIONS) {
+        let mut opts: Vec<String<32>, { config::MAX_SELECT_OPTIONS }> = Vec::new();
+        for &opt in options.iter().take(config::MAX_SELECT_OPTIONS) {
             opts.push(String::try_from(opt).unwrap_or_default())
                 .unwrap();
         }

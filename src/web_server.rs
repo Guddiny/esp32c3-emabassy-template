@@ -121,7 +121,7 @@ impl WebSocketCallback for EchoWebSocket {
                         tx.send_pong(data).await?;
                         info!("WS Ping");
                     }
-                    Message::Pong(_) => todo!(),
+                    Message::Pong(_) => {}
                 },
                 Ok(WsEither::First(Err(e))) => {
                     error!("WE: {:?}", defmt::Debug2Format(&e));

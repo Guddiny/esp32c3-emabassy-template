@@ -13,3 +13,8 @@ pub const HEADROOM: usize = 1;
 pub const WEB_STACK_SIZE: usize =
     WEB_TASK_POOL_SIZE + DHCP_SOCKET_SIZE + MAX_CONCURRENT_WEBSOCKETS + HEADROOM;
 pub const MAX_PACKET_SIZE: usize = 1024 * 4;
+pub const MAX_NOTIFICATION_PACKET_SIZE: usize = 512;
+pub const PARENT_STACK_SIZE: usize = 100;
+pub const MAX_SELECT_OPTIONS: usize = 10;
+pub const MAX_WIDGETS: usize = 40;
+pub const MAX_UI_DEPTH: usize = 8;

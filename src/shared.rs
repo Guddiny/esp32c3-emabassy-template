@@ -9,6 +9,8 @@ pub static PACKET_CHANNEL: Channel<CriticalSectionRawMutex, Vec<u8, MAX_PACKET_S
     Channel::new();
 pub static ACTION_CHANNEL: Channel<CriticalSectionRawMutex, Action, 8> = Channel::new();
 
+pub struct WsPacket {}
+
 #[derive(Clone, Copy, Debug)]
 pub enum LedSignal {
     OK,
