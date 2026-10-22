@@ -1,2 +1,2 @@
 
-[Web View](assets/all.png)
+<img src="assets/All.png" alt="Web View example">
