@@ -1,3 +1,24 @@
+## WebSocket logs
+
+The Logs tab includes a Log widget created with `b.log("", "")`.
+The tab name or a label alone does not create a log list.
+
+Messages such as `{"log":{"level":"info","message":"New log message"}}`
+append `Info: New log message` to every Log widget currently in the UI.
+Each widget fills the remaining viewport height with a scrollable list that
+automatically scrolls to new entries. Network events (WebSocket connection,
+disconnection, retries, errors, sent message types, received message sizes, and
+browser online/offline changes) are also logged, including startup events before
+the widget loads. Network logs do not include outgoing message contents.
+History is limited to 500 entries per widget and 500 recent network events.
+Each widget has a Clear button that clears all log lists and their stored
+history, including network events, without sending a server action. Cleared
+entries stay cleared across UI rebuilds; new events continue to appear.
+Its initial `text` seeds the list, and received entries survive UI rebuilds
+while the widget ID remains present. Removing the widget or reloading the page
+clears its received entries; device log messages received without a Log widget
+are ignored. Newly added widgets include recent network events.
+
 ## Отчёт об использовании памяти
 
 Запуск из корня проекта:

@@ -22,6 +22,7 @@ pub fn start_button_service(spawner: Spawner, button_pin: GPIO9<'static>) {
 async fn button_service(mut button: Input<'static>) {
     loop {
         button.wait_for_falling_edge().await;
+
         Timer::after(Duration::from_millis(30)).await;
 
         if button.is_low() {

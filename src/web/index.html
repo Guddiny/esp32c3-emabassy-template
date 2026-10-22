@@ -58,6 +58,32 @@
                 background 0.15s,
                 color 0.15s;
         }
+        body:has(.log) {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+        body:has(.log) > header,
+        .tabs {
+            flex-shrink: 0;
+        }
+        body:has(.log) > #widgets,
+        .panel.active:has(.log),
+        .flat:has(.log),
+        .card:has(.log),
+        .card-body:has(.log),
+        .log-widget {
+            flex: 1;
+            min-height: 0;
+        }
+        .card:has(.log) {
+            display: flex;
+            flex-direction: column;
+        }
+        .card:has(.log) > .card-header {
+            flex-shrink: 0;
+        }
         header {
             display: flex;
             justify-content: space-between;
@@ -394,6 +420,8 @@
             flex-shrink: 0;
         }
         .log {
+            flex: 1;
+            min-height: 100px;
             padding: 10px;
             background: var(--bg-body);
             border-radius: var(--radius-control);
@@ -401,11 +429,11 @@
                 11px/1.5 ui-monospace,
                 Menlo,
                 monospace;
-            max-height: 200px;
             overflow: auto;
             white-space: pre-wrap;
             word-break: break-word;
             margin: 0;
+            list-style: none;
             color: var(--text-main);
             border: 1px solid var(--border-color);
         }
@@ -506,6 +534,7 @@
                 reconnectDelay: 1500,
                 maxReconnectDelay: 3e4,
                 pingInterval: 25e3,
+                maxLogEntries: 500,
             },
             state = {
                 ws: null,
@@ -515,6 +544,8 @@
                 connected: !1,
                 activeTabs: new Map(),
                 collapsedGroups: new Map(),
+                logEntries: new Map(),
+                networkLogs: [],
             },
             dom = {
                 status: document.getElementById("status"),
@@ -558,9 +589,11 @@
         function connect() {
             if (!(state.ws && state.ws.readyState <= WebSocket.OPEN)) {
                 setStatus("connecting", "Connecting…");
+                networkLog("info", "WebSocket connecting");
                 try {
                     state.ws = new WebSocket(CONFIG.wsUrl);
                 } catch (e) {
+                    networkLog("error", `WebSocket connection failed: ${e.message}`);
                     return (
                         setStatus("error", "Error"),
                         void scheduleReconnect()
@@ -570,15 +603,25 @@
                     ((state.connected = !0),
                         (state.reconnectDelay = CONFIG.reconnectDelay),
                         setStatus("connected", "Connected"),
+                        networkLog("info", "WebSocket connected"),
                         send({ type: "init", schema: 1 }),
                         (state.pingTimer = setInterval(
                             () => send({ type: "ping" }),
                             CONFIG.pingInterval,
                         )));
                 }),
-                    (state.ws.onmessage = (t) => {
+                    (state.ws.onmessage = (event) => {
+                        // networkLog(
+                        //     "info",
+                        //     `WebSocket received (${event.data.length} characters)`,
+                        // );
                         try {
                             const msg = JSON.parse(event.data);
+
+                            if (msg && msg.log) {
+                                appendLog(msg.log);
+                                return;
+                            }
 
                             if (
                                 msg &&
@@ -601,17 +644,26 @@
                             }
 
                             if (msg && msg.error) {
+                                networkLog("error", "Server reported an error");
                                 toast(msg.error, "error");
                                 return;
                             }
 
                             console.warn("Unhandled WS message:", msg);
+                            networkLog("warning", "Unhandled WebSocket message");
                         } catch (e) {
                             console.error("Bad WS message:", e, event.data);
+                            networkLog("error", `Bad WebSocket message: ${e.message}`);
                         }
                     }),
-                    (state.ws.onerror = () => {}),
-                    (state.ws.onclose = () => {
+                    (state.ws.onerror = () => {
+                        networkLog("error", "WebSocket transport error");
+                    }),
+                    (state.ws.onclose = (event) => {
+                        networkLog(
+                            "warning",
+                            `WebSocket disconnected (code ${event.code}${event.reason ? `: ${event.reason}` : ""})`,
+                        );
                         ((state.connected = !1),
                             state.pingTimer &&
                                 (clearInterval(state.pingTimer),
@@ -625,6 +677,7 @@
             var e;
             state.reconnectTimer ||
                 ((e = state.reconnectDelay),
+                networkLog("info", `WebSocket retry in ${Math.round(e / 1e3)}s`),
                 setStatus("connecting", `Retry in ${Math.round(e / 1e3)}s…`),
                 (state.reconnectTimer = setTimeout(() => {
                     ((state.reconnectTimer = null),
@@ -636,12 +689,29 @@
                 }, e)));
         }
         function send(e) {
-            return (
-                !(!state.ws || state.ws.readyState !== WebSocket.OPEN) &&
-                (state.ws.send(JSON.stringify(e)), !0)
-            );
+            if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                networkLog("warning", `WebSocket send skipped (${e.type}): disconnected`);
+                return false;
+            }
+            try {
+                state.ws.send(JSON.stringify(e));
+            } catch (error) {
+                console.error("WebSocket send failed:", error);
+                networkLog("error", `WebSocket send failed (${e.type}): ${error.message}`);
+                return false;
+            }
+            networkLog("info", `WebSocket sent (${e.type})`);
+            return true;
         }
         function render(e) {
+            const logIds = new Set(
+                e.filter((widget) => widget.type === "log").map((widget) =>
+                    String(widget.id),
+                ),
+            );
+            for (const id of state.logEntries.keys()) {
+                if (!logIds.has(id)) state.logEntries.delete(id);
+            }
             const t = document.activeElement;
             var n = t?.closest("[data-widget-id]")?.dataset?.widgetId,
                 a = t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) ? t : null,
@@ -677,6 +747,9 @@
                 }
             } else
                 dom.widgets.innerHTML = '<div class="empty">No widgets</div>';
+            for (const list of dom.widgets.querySelectorAll(".log")) {
+                list.scrollTop = list.scrollHeight;
+            }
         }
         function renderLevel(a, n, s) {
             const c = s.get(a) || [];
@@ -733,6 +806,9 @@
                                 e.classList.toggle("active", t === n),
                             ),
                             i[n] && state.activeTabs.set(a, i[n].tab.id));
+                        for (const list of u[n].querySelectorAll(".log")) {
+                            list.scrollTop = list.scrollHeight;
+                        }
                     }
                 } else for (const e of c) n.appendChild(renderWidget(e, s));
         }
@@ -988,15 +1064,74 @@
         }
         function renderLog(e) {
             const t = document.createElement("div");
-            t.className = "widget";
-            var n = 0 < (e.label || "").length;
-            return (
-                (t.innerHTML = `
-        ${n ? `<label class="label">${escapeHtml(e.label)}</label>` : ""}
-        <pre class="log">${escapeHtml(e.text || "")}</pre>
-    `),
-                t
+            t.className = "widget log-widget";
+            t.innerHTML = `
+        <div class="row">
+            <span class="label">${escapeHtml(e.label || "Logs")}</span>
+            <button type="button" class="btn outline log-clear">Clear</button>
+        </div>
+        <ul class="log" aria-live="polite" aria-label="${escapeHtml(e.label || "Logs")}" tabindex="0"></ul>
+    `;
+            t.querySelector(".log-clear").addEventListener("click", clearLogs);
+            const id = String(e.id);
+            const list = t.querySelector(".log");
+            if (!state.logEntries.has(id)) {
+                state.logEntries.set(
+                    id,
+                    [...(e.text ? [e.text] : []), ...state.networkLogs].slice(
+                        -CONFIG.maxLogEntries,
+                    ),
+                );
+            }
+            state.logEntries.get(id).forEach((text) =>
+                appendLogEntry(list, text),
             );
+            return t;
+        }
+        function clearLogs() {
+            state.networkLogs.length = 0;
+            for (const entries of state.logEntries.values()) entries.length = 0;
+            for (const list of dom.widgets.querySelectorAll(".log")) {
+                list.replaceChildren();
+            }
+        }
+        function appendLogEntry(list, text) {
+            const entry = document.createElement("li");
+            entry.textContent = text;
+            list.appendChild(entry);
+            while (list.children.length > CONFIG.maxLogEntries) {
+                list.firstElementChild.remove();
+            }
+        }
+        function networkLog(level, message) {
+            appendLog({ level, message }, true);
+        }
+        function appendLog(log, network = false) {
+            if (
+                typeof log.level !== "string" ||
+                typeof log.message !== "string"
+            ) {
+                throw new TypeError("Log level and message must be strings");
+            }
+            const text =
+                log.level.charAt(0).toUpperCase() +
+                log.level.slice(1).toLowerCase() +
+                ": " +
+                log.message;
+            if (network) {
+                state.networkLogs.push(text);
+                if (state.networkLogs.length > CONFIG.maxLogEntries) {
+                    state.networkLogs.shift();
+                }
+            }
+            for (const list of dom.widgets.querySelectorAll(".log")) {
+                const id = list.closest("[data-widget-id]").dataset.widgetId;
+                const entries = state.logEntries.get(id);
+                entries.push(text);
+                if (entries.length > CONFIG.maxLogEntries) entries.shift();
+                appendLogEntry(list, text);
+                list.scrollTop = list.scrollHeight;
+            }
         }
         function renderNotification(e) {
             const t = document.createElement("div");
@@ -1007,7 +1142,14 @@
                 t
             );
         }
-        (window.addEventListener("DOMContentLoaded", connect),
+        (window.addEventListener("online", () => {
+                networkLog("info", "Browser network online");
+                connect();
+            }),
+            window.addEventListener("offline", () => {
+                networkLog("warning", "Browser network offline");
+            }),
+            window.addEventListener("DOMContentLoaded", connect),
             window.addEventListener("beforeunload", () => {
                 state.ws && state.ws.close();
             }),

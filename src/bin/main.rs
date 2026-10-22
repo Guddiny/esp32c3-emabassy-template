@@ -162,10 +162,7 @@ fn build(b: &mut Builder, settings: &mut Settings) {
     })
     .tab("Logs", false, |b| {
         b.group("", false, Alignment::Vertical, |b| {
-            b.group("", false, Alignment::Horizontal, |b| {
-                b.label("", String::try_from("Logs").as_mut().unwrap());
-                b.button("Clear", "Clear btn");
-            });
+            b.log("", "");
         });
     });
 }
