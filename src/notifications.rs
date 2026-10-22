@@ -20,8 +20,8 @@ pub enum LogLevel {
 
 #[derive(Serialize)]
 pub struct Log {
-    level: LogLevel,
-    message: String<32>,
+    pub level: LogLevel,
+    pub message: String<64>,
 }
 
 #[derive(Serialize)]
