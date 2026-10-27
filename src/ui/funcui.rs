@@ -263,14 +263,6 @@ impl Builder {
     pub fn toggle(&mut self, label: &str, value: &mut bool) -> &mut Widget {
         let id = self.next_id();
 
-        let _ = self.packet.push(Widget::Toggle {
-            id,
-            label: String::try_from(label).unwrap_or_default(),
-            value: *value,
-            parent_id: self.current_parent(),
-            trigger_update: false,
-        });
-
         if let Some(ref act) = self.action
             && act.id == id
             && let Ok(v) = act.value.as_str().parse::<bool>()
@@ -279,11 +271,25 @@ impl Builder {
             self.changed = true;
         }
 
+        let _ = self.packet.push(Widget::Toggle {
+            id,
+            label: String::try_from(label).unwrap_or_default(),
+            value: *value,
+            parent_id: self.current_parent(),
+            trigger_update: false,
+        });
+
         self.packet.last_mut().expect("just pushed a widget")
     }
 
     pub fn button(&mut self, label: &str, value: &str) {
         let id = self.next_id();
+
+        if let Some(ref act) = self.action
+            && act.id == id
+        {
+            self.changed = true;
+        }
 
         let _ = self.packet.push(Widget::Button {
             id,
@@ -292,16 +298,18 @@ impl Builder {
             value: String::try_from(value).unwrap_or_default(),
             trigger_update: true,
         });
-
-        if let Some(ref act) = self.action
-            && act.id == id
-        {
-            self.changed = true;
-        }
     }
 
     pub fn slider(&mut self, label: &str, min: u8, max: u8, value: &mut u8) -> &mut Widget {
         let id = self.next_id();
+
+        if let Some(ref action) = self.action
+            && action.id == id
+            && let Ok(v) = action.value.as_str().parse::<u8>()
+        {
+            *value = v;
+            self.changed = true;
+        }
 
         let _ = self.packet.push(Widget::Slider {
             id,
@@ -312,14 +320,6 @@ impl Builder {
             value: *value,
             trigger_update: false,
         });
-
-        if let Some(ref action) = self.action
-            && action.id == id
-            && let Ok(v) = action.value.as_str().parse::<u8>()
-        {
-            *value = v;
-            self.changed = true;
-        }
 
         self.packet.last_mut().expect("just pushed a widget")
     }
@@ -333,6 +333,14 @@ impl Builder {
     ) -> &mut Widget {
         let id = self.next_id();
 
+        if let Some(ref action) = self.action
+            && action.id == id
+        {
+            value.clear();
+            value.push_str(action.value.as_str()).unwrap();
+            self.changed = true;
+        }
+
         let _ = self.packet.push(Widget::Input {
             id,
             parent_id: self.current_parent(),
@@ -342,14 +350,6 @@ impl Builder {
             input_type,
             trigger_update: false,
         });
-
-        if let Some(ref action) = self.action
-            && action.id == id
-        {
-            value.clear();
-            value.push_str(action.value.as_str()).unwrap();
-            self.changed = true;
-        }
 
         self.packet.last_mut().expect("just pushed a widget")
     }
@@ -371,15 +371,6 @@ impl Builder {
             // ERROR
         }
 
-        let _ = self.packet.push(Widget::Select {
-            id,
-            parent: self.current_parent(),
-            label: String::try_from(label).unwrap(),
-            selected_index: *selected_index,
-            options: opts,
-            trigger_update: false,
-        });
-
         if let Some(ref act) = self.action
             && act.id == id
         {
@@ -394,18 +385,20 @@ impl Builder {
             }
         }
 
+        let _ = self.packet.push(Widget::Select {
+            id,
+            parent: self.current_parent(),
+            label: String::try_from(label).unwrap(),
+            selected_index: *selected_index,
+            options: opts,
+            trigger_update: false,
+        });
+
         self.packet.last_mut().expect("just pushed a widget")
     }
 
     pub fn indicator(&mut self, label: &str, enabled: &mut bool) {
         let id = self.next_id();
-
-        let _ = self.packet.push(Widget::Indicator {
-            id,
-            parent_id: self.current_parent(),
-            label: String::try_from(label).unwrap(),
-            enabled: *enabled,
-        });
 
         if let Some(ref act) = self.action
             && act.id == id
@@ -413,10 +406,24 @@ impl Builder {
         {
             *enabled = v;
         }
+
+        let _ = self.packet.push(Widget::Indicator {
+            id,
+            parent_id: self.current_parent(),
+            label: String::try_from(label).unwrap(),
+            enabled: *enabled,
+        });
     }
 
     pub fn progress_bar(&mut self, label: &str, text: &str, progress: &mut u8) {
         let id = self.next_id();
+
+        if let Some(ref act) = self.action
+            && act.id == id
+            && let Ok(v) = act.value.as_str().parse::<u8>()
+        {
+            *progress = v;
+        }
 
         if self
             .packet
@@ -431,24 +438,10 @@ impl Builder {
         {
             error!("Fail to push widget, looks like the packet is full");
         }
-
-        if let Some(ref act) = self.action
-            && act.id == id
-            && let Ok(v) = act.value.as_str().parse::<u8>()
-        {
-            *progress = v;
-        }
     }
 
     pub fn progress_ring(&mut self, label: &str, in_progress: &mut bool) {
         let id = self.next_id();
-
-        let _ = self.packet.push(Widget::ProgressRing {
-            id,
-            parent_id: self.current_parent(),
-            label: String::try_from(label).unwrap(),
-            in_progress: *in_progress,
-        });
 
         if let Some(ref act) = self.action
             && act.id == id
@@ -456,6 +449,13 @@ impl Builder {
         {
             *in_progress = v;
         }
+
+        let _ = self.packet.push(Widget::ProgressRing {
+            id,
+            parent_id: self.current_parent(),
+            label: String::try_from(label).unwrap(),
+            in_progress: *in_progress,
+        });
     }
 
     pub fn log(&mut self, label: &str, log: &str) {
@@ -472,14 +472,6 @@ impl Builder {
     pub fn label(&mut self, label: &str, text: &mut String<32>) {
         let id = self.next_id();
 
-        let _ = self.packet.push(Widget::Label {
-            id,
-            parent_id: self.current_parent(),
-            label: String::try_from(label).unwrap(),
-            text: String::try_from(text.as_str()).unwrap(),
-            trigger_update: false,
-        });
-
         if let Some(ref action) = self.action
             && action.id == id
         {
@@ -487,5 +479,13 @@ impl Builder {
             text.push_str(action.value.as_str()).unwrap();
             self.changed = true;
         }
+
+        let _ = self.packet.push(Widget::Label {
+            id,
+            parent_id: self.current_parent(),
+            label: String::try_from(label).unwrap(),
+            text: String::try_from(text.as_str()).unwrap(),
+            trigger_update: false,
+        });
     }
 }

@@ -15,6 +15,7 @@ use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
 use heapless::String;
 use my_esp::notifications::OutboundPackage;
+use my_esp::state::{AppState, State};
 use my_esp::{
     button_service, dhcp_server, led_service, rf_sensor,
     shared::ACTION_CHANNEL,
@@ -67,13 +68,16 @@ async fn main(spawner: Spawner) -> ! {
     led_service::start_led_service(spawner, peripherals.GPIO8);
     button_service::start_button_service(spawner, peripherals.GPIO9);
 
-    let mut settings = Settings {
-        led_enabled: true,
-        wifi_ssid: String::try_from("12345678").unwrap_or_default(),
+    let mut app_state = AppState {
+        settings: Settings {
+            led_enabled: true,
+            wifi_ssid: String::try_from("12345678").unwrap_or_default(),
 
-        min_vol: 1,
-        max_vol: 12,
-        current_vol: 4,
+            min_vol: 1,
+            max_vol: 12,
+            current_vol: 4,
+        },
+        state: State { is_running: false },
     };
 
     loop {
@@ -96,7 +100,7 @@ async fn main(spawner: Spawner) -> ! {
         }
 
         let mut builder = Builder::new(action);
-        build(&mut builder, &mut settings);
+        build(&mut builder, &mut app_state);
 
         let pkg = OutboundPackage::Data(builder.packet.as_slice());
 
@@ -104,7 +108,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-fn build(b: &mut Builder, settings: &mut Settings) {
+fn build(b: &mut Builder, app_state: &mut AppState) {
     b.tab("Main", false, |b| {
         b.group("", false, Alignment::Vertical, |b| {
             b.group("wifi", false, Alignment::Vertical, |b| {
@@ -112,7 +116,7 @@ fn build(b: &mut Builder, settings: &mut Settings) {
                     "SSID",
                     "SSID",
                     InputType::Text,
-                    &mut String::try_from("K92_new").unwrap(),
+                    &mut app_state.settings.wifi_ssid,
                 );
                 b.input(
                     "Password",
@@ -125,7 +129,8 @@ fn build(b: &mut Builder, settings: &mut Settings) {
             });
 
             b.group("User settings", false, Alignment::Vertical, |b| {
-                b.toggle("Echo Mode", &mut true).notify_on_change();
+                b.toggle("Echo Mode", &mut app_state.settings.led_enabled)
+                    .notify_on_change();
                 b.button("Connect", "Connect Btn");
 
                 b.group("Email", false, Alignment::Horizontal, |b| {
@@ -144,15 +149,15 @@ fn build(b: &mut Builder, settings: &mut Settings) {
         b.group("", false, Alignment::Vertical, |b| {
             b.slider(
                 "Volume2",
-                settings.min_vol,
-                settings.max_vol,
-                &mut settings.current_vol,
+                app_state.settings.min_vol,
+                app_state.settings.max_vol,
+                &mut app_state.settings.current_vol,
             );
             b.slider(
                 "Brightness",
-                settings.min_vol,
-                settings.max_vol,
-                &mut settings.current_vol,
+                app_state.settings.min_vol,
+                app_state.settings.max_vol,
+                &mut app_state.settings.current_vol,
             );
             b.select("Items", &["OPtion 1", "Option 2", "option 3"], &mut 1);
             b.progress_bar("Progress bar 1", "Some text", &mut 0);

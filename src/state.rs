@@ -14,7 +14,7 @@ pub struct Settings {
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct State {
-    pub selected_tab_id: u8,
+    pub is_running: bool,
 }
 
 pub struct AppState {
