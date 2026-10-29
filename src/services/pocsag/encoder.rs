@@ -1,17 +1,17 @@
-use crate::pocsag::consts::{BaudRate, POCSAG_IDLE_CODE, POCSAG_SYNC_CODE};
+use crate::services::pocsag::consts::{BaudRate, POCSAG_IDLE_CODE, POCSAG_SYNC_CODE};
 
 /// Computes the BCH(31,21) + parity codeword.
 ///
 /// Mirrors `OpenPager::bchEncode` from the original C++ library.
 pub fn bch_encode(data: u32) -> u32 {
-    let mut cw_e = data & 0xFFFF_F800;
+    let mut cw_e = data & 0xffff_f800;
     for _ in 0..21 {
         if cw_e & 0x8000_0000 != 0 {
-            cw_e ^= 0xED20_0000;
+            cw_e ^= 0xed20_0000;
         }
         cw_e <<= 1;
     }
-    let mut cw = (data & 0xFFFF_F800) | (cw_e >> 21);
+    let mut cw = (data & 0xffff_f800) | (cw_e >> 21);
     // Even parity
     let mut parity = 0u32;
     for i in 0..32 {
@@ -53,7 +53,7 @@ pub fn encode_alpha(msg: &[u8], codewords: &mut [u32]) -> usize {
         bits += 7;
         while bits >= 20 {
             bits -= 20;
-            codewords[idx] = bch_encode((1u32 << 31) | ((((buf >> bits) & 0xFFFFF) as u32) << 11));
+            codewords[idx] = bch_encode((1u32 << 31) | ((((buf >> bits) & 0xfffff) as u32) << 11));
             idx += 1;
         }
     }
@@ -67,7 +67,7 @@ pub fn encode_alpha(msg: &[u8], codewords: &mut [u32]) -> usize {
             bits += 1;
         }
         codewords[idx] =
-            bch_encode((1u32 << 31) | ((((buf >> (bits - 20)) & 0xFFFFF) as u32) << 11));
+            bch_encode((1u32 << 31) | ((((buf >> (bits - 20)) & 0xfffff) as u32) << 11));
         idx += 1;
     }
 
@@ -82,7 +82,7 @@ pub fn encode_numeric(msg: &[u8], codewords: &mut [u32]) -> usize {
     let mut digits_in_cw: u8 = 0;
 
     for &bcd in msg {
-        data = (data << 4) | (bcd as u32 & 0x0F);
+        data = (data << 4) | (bcd as u32 & 0x0f);
         digits_in_cw += 1;
 
         if digits_in_cw == 5 {
@@ -96,7 +96,7 @@ pub fn encode_numeric(msg: &[u8], codewords: &mut [u32]) -> usize {
     // Flush remaining digits, padded with spaces (0x0C)
     if digits_in_cw > 0 {
         while digits_in_cw < 5 {
-            data = (data << 4) | 0x0C;
+            data = (data << 4) | 0x0c;
             digits_in_cw += 1;
         }
         codewords[idx] = bch_encode((1u32 << 31) | (data << 11));
@@ -141,7 +141,7 @@ pub fn build_transmit_buffer(
         if out_idx >= out.len() {
             return 0;
         }
-        out[out_idx] = 0xAAAA_AAAA;
+        out[out_idx] = 0xaaaa_aaaa;
         out_idx += 1;
     }
 

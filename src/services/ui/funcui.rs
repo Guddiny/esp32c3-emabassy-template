@@ -1,11 +1,14 @@
 use defmt::error;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
+use embassy_sync::signal::Signal;
 use heapless::{String, Vec};
 use serde::{Deserialize, Serialize};
 
-use crate::config;
+use crate::app::config;
 
 pub static REDRAW_UI: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+pub static ACTION_CHANNEL: Channel<CriticalSectionRawMutex, Action, 8> = Channel::new();
 
 #[derive(Deserialize, Debug)]
 pub struct Action {

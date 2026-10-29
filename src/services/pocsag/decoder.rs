@@ -1,8 +1,6 @@
-use crate::pocsag::consts::{
-    POCSAG_SYNC_CODE, POCSAG_SYNC_INVERTED, POCSAG_IDLE_CODE, BaudRate,
-};
-use crate::pocsag::message::OpenPagerMessage;
-use crate::pocsag::encoder::bch_encode;
+use crate::services::pocsag::consts::{BaudRate, POCSAG_IDLE_CODE, POCSAG_SYNC_CODE, POCSAG_SYNC_INVERTED};
+use crate::services::pocsag::encoder::bch_encode;
+use crate::services::pocsag::message::OpenPagerMessage;
 
 /// Software POCSAG decoder for a single baud rate.
 ///
@@ -87,9 +85,7 @@ where
         }
 
         // Sample at the centre of each bit period
-        if self.next_sample_time != 0
-            && (now.wrapping_sub(self.next_sample_time) as i32) >= 0
-        {
+        if self.next_sample_time != 0 && (now.wrapping_sub(self.next_sample_time) as i32) >= 0 {
             self.sample_bit(bit);
             self.next_sample_time = self.next_sample_time.wrapping_add(self.bit_period_us);
 
@@ -186,7 +182,7 @@ where
                 if self.in_message {
                     self.finalize_message();
                 }
-                let address = (cw >> 13) & 0x7FFFF;
+                let address = (cw >> 13) & 0x7ffff;
                 let func = ((cw >> 11) & 0x03) as u8;
                 self.current_ric = (address << 3) | ((i as u32) / 2);
                 self.current_func = func;
@@ -260,13 +256,13 @@ fn decode_alpha(cws: &[u32], msg: &mut OpenPagerMessage) {
     let mut text_idx = 0usize;
 
     for &cw in cws {
-        let data = (cw >> 11) & 0xFFFFF;
+        let data = (cw >> 11) & 0xfffff;
         bit_buf = (bit_buf << 20) | data as u64;
         bit_count += 20;
 
         while bit_count >= 7 && text_idx < 254 {
             bit_count -= 7;
-            let ch = ((bit_buf >> bit_count) & 0x7F) as u8;
+            let ch = ((bit_buf >> bit_count) & 0x7f) as u8;
 
             // Reverse 7 bits
             let ch = ch.reverse_bits() >> 1;
@@ -290,12 +286,12 @@ fn decode_numeric(cws: &[u32], msg: &mut OpenPagerMessage) {
     let mut text_idx = 0usize;
 
     for &cw in cws {
-        let data = (cw >> 11) & 0xFFFFF;
+        let data = (cw >> 11) & 0xfffff;
         for d in (0..5).rev() {
             if text_idx >= 254 {
                 break;
             }
-            let bcd = ((data >> (d * 4)) & 0x0F) as u8;
+            let bcd = ((data >> (d * 4)) & 0x0f) as u8;
             msg.text[text_idx] = bcd_to_char(bcd) as u8;
             text_idx += 1;
         }
@@ -310,12 +306,12 @@ fn bcd_to_char(bcd: u8) -> char {
     let bcd = bcd.reverse_bits() >> 4;
     match bcd {
         0..=9 => (b'0' + bcd) as char,
-        0x0A => '*',
-        0x0B => 'U',
-        0x0C => ' ',
-        0x0D => '-',
-        0x0E => ')',
-        0x0F => '(',
+        0x0a => '*',
+        0x0b => 'U',
+        0x0c => ' ',
+        0x0d => '-',
+        0x0e => ')',
+        0x0f => '(',
         _ => '?',
     }
 }

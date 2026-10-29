@@ -3,8 +3,8 @@ use embedded_hal::delay::DelayNs;
 use embedded_hal_async::digital::Wait;
 use embedded_hal_async::spi::SpiDevice;
 
-use crate::pocsag::consts::{BaudRate, tx_power};
-use crate::pocsag::encoder;
+use crate::services::pocsag::consts::{BaudRate, tx_power};
+use crate::services::pocsag::encoder;
 
 /// Async POCSAG pager driver for CC1101.
 ///

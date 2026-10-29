@@ -6,7 +6,7 @@ version      = "0.1.0"
 
 [[bin]]
 name = "my_esp"
-path = "./src/bin/main.rs"
+path = "./src/app/main.rs"
 
 [dependencies]
 esp-hal = { version = "~1.2.2", features = ["defmt", "esp32c3", "unstable"] }
@@ -76,3 +76,8 @@ codegen-units = 1     # LLVM can perform better optimizations using a single thr
 debug         = 2     # prefer slower builds but better debugging experience
 lto           = 'fat'
 opt-level     = 's'
+
+[features]
+default = ["board-esp32c3-mini-1"]
+board-esp32c3-mini-1 = []
+board-custom = []

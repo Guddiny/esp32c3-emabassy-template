@@ -1,11 +1,15 @@
 use defmt::{error, info};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 use heapless::{String, Vec};
 use serde::Serialize;
 
-use crate::{config, shared::PACKET_CHANNEL, ui::funcui::Widget};
+use crate::app::config::*;
+use crate::services::ui::funcui::Widget;
 
 pub static NOTIFICATIONS_CHANNEL: Channel<CriticalSectionRawMutex, Notification, 4> =
+    Channel::new();
+pub static PACKET_CHANNEL: Channel<CriticalSectionRawMutex, Vec<u8, MAX_PACKET_SIZE>, 4> =
     Channel::new();
 
 #[derive(Serialize)]
@@ -77,11 +81,11 @@ impl Notification {
 
     fn serialize_package(
         package: &OutboundPackage,
-    ) -> Result<Vec<u8, { config::MAX_PACKET_SIZE }>, serde_json_core::ser::Error> {
-        let mut packet = Vec::<u8, { config::MAX_PACKET_SIZE }>::new();
+    ) -> Result<Vec<u8, { MAX_PACKET_SIZE }>, serde_json_core::ser::Error> {
+        let mut packet = Vec::<u8, { MAX_PACKET_SIZE }>::new();
 
         packet
-            .resize(config::MAX_PACKET_SIZE, 0)
+            .resize(MAX_PACKET_SIZE, 0)
             .expect("packet length equals its capacity");
 
         let len = serde_json_core::to_slice(package, packet.as_mut_slice())?;

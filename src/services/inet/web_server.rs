@@ -6,14 +6,12 @@ use heapless::Vec;
 use picoserve::futures::Either as WsEither;
 use picoserve::response::WebSocketUpgrade;
 use picoserve::response::ws::{Message, SocketRx, SocketTx, WebSocketCallback};
-use picoserve::{
-    AppBuilder, AppRouter, Server, make_static,
-    routing::{PathRouter, get, get_service},
-};
+use picoserve::routing::{PathRouter, get, get_service};
+use picoserve::{AppBuilder, AppRouter, Server, make_static};
 
-use crate::shared::*;
-use crate::ui::funcui::{Action, REDRAW_UI};
-use crate::{config, shared};
+use crate::app::config;
+use crate::services::notifications::PACKET_CHANNEL;
+use crate::services::ui::funcui::{ACTION_CHANNEL, Action, REDRAW_UI};
 
 const WEB_TASK_POOL_SIZE: usize = config::WEB_TASK_POOL_SIZE;
 

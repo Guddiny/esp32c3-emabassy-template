@@ -1,4 +1,4 @@
-use crate::pocsag::consts::MAX_TEXT_LEN;
+use crate::services::pocsag::consts::MAX_TEXT_LEN;
 
 /// A decoded POCSAG message.
 #[derive(Clone)]
