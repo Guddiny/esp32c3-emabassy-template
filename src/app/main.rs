@@ -58,6 +58,7 @@ async fn main(spawner: Spawner) -> ! {
     radio::start_rf_sensor(spawner, board.radio);
     led::start_led_driver(spawner, board.led);
     button::start_button_driver(spawner, board.button);
+    usb::start_usb_driver(spawner, board.usb);
 
     let mut app_state = AppState {
         settings: Settings {

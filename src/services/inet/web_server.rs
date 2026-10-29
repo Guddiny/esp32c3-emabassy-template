@@ -13,8 +13,6 @@ use crate::app::config;
 use crate::services::notifications::PACKET_CHANNEL;
 use crate::services::ui::funcui::{ACTION_CHANNEL, Action, REDRAW_UI};
 
-const WEB_TASK_POOL_SIZE: usize = config::WEB_TASK_POOL_SIZE;
-
 pub struct AppProps;
 
 impl AppBuilder for AppProps {
@@ -36,7 +34,7 @@ impl AppBuilder for AppProps {
 }
 
 pub async fn start_web_server(spawner: Spawner, stack: Stack<'static>) {
-    info!("Starting web server with {} tasks...", WEB_TASK_POOL_SIZE);
+    info!("Starting web server with {} tasks...", config::wlan::WEB_TASK_POOL_SIZE);
 
     let app = make_static!(AppRouter<AppProps>, AppProps.build_app());
 
@@ -51,12 +49,12 @@ pub async fn start_web_server(spawner: Spawner, stack: Stack<'static>) {
         .keep_connection_alive()
     );
 
-    for id in 0..WEB_TASK_POOL_SIZE {
+    for id in 0..config::wlan::WEB_TASK_POOL_SIZE {
         spawner.spawn(web_task(id, stack, app, config).unwrap());
     }
 }
 
-#[embassy_executor::task(pool_size=WEB_TASK_POOL_SIZE)]
+#[embassy_executor::task(pool_size=config::wlan::WEB_TASK_POOL_SIZE)]
 async fn web_task(
     id: usize,
     stack: Stack<'static>,
@@ -67,7 +65,7 @@ async fn web_task(
     let mut tcp_tx_buffer = [0; 1024];
     let mut http_buffer = [0; 4096];
 
-    info!("Web server listening on port {}", config::HTTP_SERVER_PORT);
+    info!("Web server listening on port {}", config::wlan::HTTP_SERVER_PORT);
 
     let server = Server::new(app, config, &mut http_buffer);
 
@@ -75,7 +73,7 @@ async fn web_task(
         .listen_and_serve(
             id,
             stack,
-            config::HTTP_SERVER_PORT,
+            config::wlan::HTTP_SERVER_PORT,
             &mut tcp_rx_buffer,
             &mut tcp_tx_buffer,
         )

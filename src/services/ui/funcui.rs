@@ -92,7 +92,7 @@ pub enum Widget {
         parent: u32,
         label: String<32>,
         selected_index: u8,
-        options: heapless::Vec<String<32>, { config::MAX_SELECT_OPTIONS }>,
+        options: heapless::Vec<String<32>, { config::ui::MAX_SELECT_OPTIONS }>,
         trigger_update: bool,
     },
     #[serde(rename = "log")]
@@ -165,9 +165,9 @@ impl Widget {
 pub struct Builder {
     pub action: Option<Action>,
     next_id: u32,
-    pub packet: Vec<Widget, { config::MAX_WIDGETS }>,
+    pub packet: Vec<Widget, { config::ui::MAX_WIDGETS }>,
     pub changed: bool,
-    parent_stack: Vec<u32, { config::MAX_UI_DEPTH }>,
+    parent_stack: Vec<u32, { config::ui::MAX_UI_DEPTH }>,
 }
 
 impl Builder {
@@ -364,8 +364,8 @@ impl Builder {
         selected_index: &mut u8,
     ) -> &mut Widget {
         let id = self.next_id();
-        let mut opts: Vec<String<32>, { config::MAX_SELECT_OPTIONS }> = Vec::new();
-        for &opt in options.iter().take(config::MAX_SELECT_OPTIONS) {
+        let mut opts: Vec<String<32>, { config::ui::MAX_SELECT_OPTIONS }> = Vec::new();
+        for &opt in options.iter().take(config::ui::MAX_SELECT_OPTIONS) {
             opts.push(String::try_from(opt).unwrap_or_default())
                 .unwrap();
         }

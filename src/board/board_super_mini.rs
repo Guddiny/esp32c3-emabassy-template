@@ -1,5 +1,6 @@
 use esp_hal::peripherals::{
-    FROM_CPU_INTR0, GPIO0, GPIO1, GPIO4, GPIO8, GPIO9, GPIO10, Peripherals, SPI2, TIMG0, WIFI,
+    FROM_CPU_INTR0, GPIO0, GPIO1, GPIO4, GPIO8, GPIO9, GPIO10, Peripherals, SPI2, TIMG0,
+    USB_DEVICE, WIFI,
 };
 
 pub struct LedPin(pub GPIO8<'static>);
@@ -10,6 +11,7 @@ pub struct RadioGdo0Pin(pub GPIO4<'static>);
 pub struct RadioGdo2Pin(pub GPIO0<'static>);
 pub struct RadioSpi(pub SPI2<'static>);
 pub struct Wifi(pub WIFI<'static>);
+pub struct UsbSerial(pub USB_DEVICE<'static>);
 
 pub struct RadioSpiPins {
     pub cs: RadioCsPin,
@@ -25,6 +27,7 @@ pub struct Board {
     pub rtos_timer: TIMG0<'static>,
     pub rtos_irq: FROM_CPU_INTR0<'static>,
     pub wifi: Wifi,
+    pub usb: UsbSerial,
 }
 
 impl Board {
@@ -41,6 +44,7 @@ impl Board {
             wifi: Wifi(peripherals.WIFI),
             rtos_timer: peripherals.TIMG0,
             rtos_irq: peripherals.FROM_CPU_INTR0,
+            usb: UsbSerial(peripherals.USB_DEVICE),
         }
     }
 }

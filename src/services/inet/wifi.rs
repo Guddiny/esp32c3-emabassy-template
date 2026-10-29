@@ -12,11 +12,11 @@ use crate::app::config;
 use crate::board::board::Wifi;
 
 // One socket per web task plus one UDP socket for the DHCP server.
-static STACK_RESOURCES: StaticCell<StackResources<{ config::WEB_STACK_SIZE }>> = StaticCell::new();
+static STACK_RESOURCES: StaticCell<StackResources<{ config::wlan::WEB_STACK_SIZE }>> = StaticCell::new();
 
 pub async fn start_wifi(spawner: Spawner, peripherals_wifi: Wifi) -> Stack<'static> {
     let ap_ip: core::net::Ipv4Addr =
-        core::net::Ipv4Addr::from_str(config::WIFI_AP_STATIC_IP).unwrap();
+        core::net::Ipv4Addr::from_str(config::wlan::WIFI_AP_STATIC_IP).unwrap();
 
     let wifi_controller =
         esp_radio::wifi::WifiController::new(peripherals_wifi.0, Default::default())
@@ -66,8 +66,8 @@ pub async fn start_wifi(spawner: Spawner, peripherals_wifi: Wifi) -> Stack<'stat
 
 #[embassy_executor::task]
 async fn wifi_task(mut controller: esp_radio::wifi::WifiController<'static>) {
-    const SSID: &str = config::WIFI_AP_SSID;
-    const PASSWORD: &str = config::WIFI_AP_PASSW;
+    const SSID: &str = config::wlan::WIFI_AP_SSID;
+    const PASSWORD: &str = config::wlan::WIFI_AP_PASSW;
 
     // Describe ourselves as a station (a normal client joining an access point)
     // and apply that configuration to the radio.

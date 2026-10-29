@@ -13,7 +13,7 @@ use static_cell::StaticCell;
 
 use crate::app::state::Settings;
 use crate::board::board::RadioSpiPins;
-use crate::services::notifications::{Messaging, MessageKind};
+use crate::services::notifications::{MessageKind, Messaging, OutboundPackage};
 
 static RADIO_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, Spi<'static, Async>>> =
     StaticCell::new();
@@ -79,11 +79,8 @@ async fn rf_sensor_task(
     loop {
         info!("Sensor task");
 
-        let n = Messaging::new(
-            MessageKind::Error,
-            "Some error during device RF sensor",
-        );
-        let p = crate::services::notifications::OutboundPackage::Notification(&n);
+        let n = Messaging::new(MessageKind::Error, "Some error during device RF sensor");
+        let p = OutboundPackage::Notification(&n);
         Messaging::publish(&p).await;
 
         Timer::after(Duration::from_secs(5)).await;

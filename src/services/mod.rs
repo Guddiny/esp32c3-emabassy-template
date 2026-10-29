@@ -5,3 +5,4 @@ pub mod inet;
 pub mod ui;
 pub mod radio;
 pub mod pocsag;
+pub mod usb;

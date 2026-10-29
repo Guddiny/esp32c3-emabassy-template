@@ -16,7 +16,7 @@ pub async fn start_dhcp_server(spawner: Spawner, stack: Stack<'static>) {
 
 #[embassy_executor::task]
 async fn dhcp_server_task(stack: Stack<'static>) {
-    let ap_ip = Ipv4Addr::from_str(config::WIFI_AP_STATIC_IP).unwrap();
+    let ap_ip = Ipv4Addr::from_str(config::wlan::WIFI_AP_STATIC_IP).unwrap();
     let [a, b, c, _] = ap_ip.octets();
     let gateways = [ap_ip];
     let dns = [ap_ip];
@@ -31,8 +31,8 @@ async fn dhcp_server_task(stack: Stack<'static>) {
     };
 
     let mut leaser = SimpleDhcpLeaser {
-        start: Ipv4Addr::new(a, b, c, config::WIFI_AP_GATEWAY_START_IP),
-        end: Ipv4Addr::new(a, b, c, config::WIFI_AP_GATEWAY_END_IP),
+        start: Ipv4Addr::new(a, b, c, config::wlan::WIFI_AP_GATEWAY_START_IP),
+        end: Ipv4Addr::new(a, b, c, config::wlan::WIFI_AP_GATEWAY_END_IP),
         leases: Default::default(),
     };
 
