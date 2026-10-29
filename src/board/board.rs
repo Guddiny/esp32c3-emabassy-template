@@ -7,4 +7,4 @@ compile_error!("multiple boards selected: enable exactly one variant feature");
 #[cfg(feature = "board-esp32c3-mini-1")]
 pub use super::board_super_mini::*;
 #[cfg(feature = "board-custom")]
-pub use super::custom::*;
+pub use super::board_custom::*;
