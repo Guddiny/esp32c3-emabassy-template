@@ -2,17 +2,16 @@ use defmt::{error, info};
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::Duration;
+use heapless::Vec;
 use picoserve::futures::Either as WsEither;
 use picoserve::response::WebSocketUpgrade;
 use picoserve::response::ws::{Message, SocketRx, SocketTx, WebSocketCallback};
-use picoserve::{
-    AppBuilder, AppRouter, Server, make_static,
-    routing::{PathRouter, get, get_service},
-};
+use picoserve::routing::{PathRouter, get, get_service};
+use picoserve::{AppBuilder, AppRouter, Server, make_static};
 
-use crate::config;
-use crate::shared::*;
-use crate::ui::funcui::REDRAW_UI;
+use crate::app::config;
+use crate::services::notifications::PACKET_CHANNEL;
+use crate::services::ui::funcui::{ACTION_CHANNEL, Action, REDRAW_UI};
 
 const WEB_TASK_POOL_SIZE: usize = config::WEB_TASK_POOL_SIZE;
 
@@ -110,7 +109,13 @@ impl WebSocketCallback for EchoWebSocket {
                 Ok(WsEither::First(Ok(message))) => match message {
                     Message::Text(text) => {
                         info!("Text Message Received {}", text);
-                        REDRAW_UI.signal(());
+                        if let Ok(actions) = serde_json_core::from_str::<Vec<Action, 20>>(text) {
+                            for act in actions.0 {
+                                ACTION_CHANNEL.send(act).await;
+                            }
+                        } else {
+                            error!("Action deserialization failed");
+                        }
                     }
                     Message::Binary(_) => {}
                     Message::Close(reason) => {

@@ -1,19 +1,15 @@
 use defmt::{error, info};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
-use esp_hal::{
-    gpio::{Input, InputConfig},
-    peripherals::GPIO9,
-};
+use esp_hal::gpio::{Input, InputConfig};
 use heapless::String;
 
-use crate::{
-    notifications::{Log, LogLevel, Notification, OutboundPackage},
-    shared::{LED_CHANNEL, LedSignal},
-};
+use crate::board::board::ButtonPin;
+use crate::services::notifications::{Log, LogLevel, Messaging, OutboundPackage};
+use crate::services::led::{LED_CHANNEL, LedSignal};
 
-pub fn start_button_service(spawner: Spawner, button_pin: GPIO9<'static>) {
-    let button = Input::new(button_pin, InputConfig::default());
+pub fn start_button_driver(spawner: Spawner, button_pin: ButtonPin) {
+    let button = Input::new(button_pin.0, InputConfig::default());
 
     spawner.spawn(button_service(button).unwrap());
 }
@@ -32,7 +28,7 @@ async fn button_service(mut button: Input<'static>) {
                 message: String::try_from("New log message ").unwrap(),
             };
             let pkg = OutboundPackage::Log(&log);
-            Notification::publish(&pkg).await;
+            Messaging::publish(&pkg).await;
             match LED_CHANNEL.try_send(LedSignal::OK) {
                 Ok(_) => info!("LED message sent"),
                 Err(e) => error!("{:?}", defmt::Debug2Format(&e)),

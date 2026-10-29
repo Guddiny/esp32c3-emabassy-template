@@ -1,12 +1,14 @@
-use core::{net::Ipv4Addr, str::FromStr};
+use core::net::Ipv4Addr;
+use core::str::FromStr;
 
 use defmt::{error, info};
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::Duration;
-use esp_hal_dhcp_server::{simple_leaser::SimpleDhcpLeaser, structs::DhcpServerConfig};
+use esp_hal_dhcp_server::simple_leaser::SimpleDhcpLeaser;
+use esp_hal_dhcp_server::structs::DhcpServerConfig;
 
-use crate::config;
+use crate::app::config;
 
 pub async fn start_dhcp_server(spawner: Spawner, stack: Stack<'static>) {
     spawner.spawn(dhcp_server_task(stack).unwrap());

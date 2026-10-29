@@ -14,22 +14,19 @@ use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
 use heapless::String;
-use my_esp::notifications::OutboundPackage;
-use my_esp::{
-    button_service, dhcp_server, led_service, rf_sensor,
-    shared::ACTION_CHANNEL,
-    state::Settings,
-    ui::funcui::{Alignment, Builder, InputType, REDRAW_UI},
-    web_server, wifi,
-};
+use my_esp::app::state::{AppState, Settings, State};
+use my_esp::board::board::Board;
+use my_esp::services::notifications::{Messaging, OutboundPackage};
+use my_esp::services::ui::funcui::{ACTION_CHANNEL, Alignment, Builder, InputType, REDRAW_UI};
+use my_esp::services::*;
+
+extern crate alloc;
 
 #[panic_handler]
 fn panic(panic_info: &core::panic::PanicInfo) -> ! {
     error!("{}", panic_info);
     loop {}
 }
-
-extern crate alloc;
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
@@ -46,34 +43,32 @@ async fn main(spawner: Spawner) -> ! {
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
+    let board = Board::init(peripherals);
 
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 66320);
 
-    let timg0 = TimerGroup::new(peripherals.TIMG0);
-    esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);
+    let timg0 = TimerGroup::new(board.rtos_timer);
+    esp_rtos::start(timg0.timer0, board.rtos_irq);
 
     info!("Embassy initialized!");
 
-    let stack = wifi::start_wifi(spawner, peripherals.WIFI).await;
-    web_server::start_web_server(spawner, stack).await;
-    dhcp_server::start_dhcp_server(spawner, stack).await;
-    rf_sensor::start_rf_sensor(
-        spawner,
-        peripherals.SPI2,
-        peripherals.GPIO10,
-        peripherals.GPIO4,
-        peripherals.GPIO0,
-    );
-    led_service::start_led_service(spawner, peripherals.GPIO8);
-    button_service::start_button_service(spawner, peripherals.GPIO9);
+    let stack = inet::wifi::start_wifi(spawner, board.wifi).await;
+    inet::web_server::start_web_server(spawner, stack).await;
+    inet::dhcp_server::start_dhcp_server(spawner, stack).await;
+    radio::start_rf_sensor(spawner, board.radio);
+    led::start_led_driver(spawner, board.led);
+    button::start_button_driver(spawner, board.button);
 
-    let mut settings = Settings {
-        led_enabled: true,
-        wifi_ssid: String::try_from("12345678").unwrap_or_default(),
+    let mut app_state = AppState {
+        settings: Settings {
+            led_enabled: true,
+            wifi_ssid: String::try_from("12345678").unwrap_or_default(),
 
-        min_vol: 1,
-        max_vol: 12,
-        current_vol: 4,
+            min_vol: 1,
+            max_vol: 12,
+            current_vol: 4,
+        },
+        state: State { is_running: false },
     };
 
     loop {
@@ -96,15 +91,15 @@ async fn main(spawner: Spawner) -> ! {
         }
 
         let mut builder = Builder::new(action);
-        build(&mut builder, &mut settings);
+        build(&mut builder, &mut app_state);
 
         let pkg = OutboundPackage::Data(builder.packet.as_slice());
 
-        my_esp::notifications::Notification::publish(&pkg).await;
+        Messaging::publish(&pkg).await;
     }
 }
 
-fn build(b: &mut Builder, settings: &mut Settings) {
+fn build(b: &mut Builder, app_state: &mut AppState) {
     b.tab("Main", false, |b| {
         b.group("", false, Alignment::Vertical, |b| {
             b.group("wifi", false, Alignment::Vertical, |b| {
@@ -112,7 +107,7 @@ fn build(b: &mut Builder, settings: &mut Settings) {
                     "SSID",
                     "SSID",
                     InputType::Text,
-                    &mut String::try_from("K92_new").unwrap(),
+                    &mut app_state.settings.wifi_ssid,
                 );
                 b.input(
                     "Password",
@@ -125,7 +120,8 @@ fn build(b: &mut Builder, settings: &mut Settings) {
             });
 
             b.group("User settings", false, Alignment::Vertical, |b| {
-                b.toggle("Echo Mode", &mut true).notify_on_change();
+                b.toggle("Echo Mode", &mut app_state.settings.led_enabled)
+                    .notify_on_change();
                 b.button("Connect", "Connect Btn");
 
                 b.group("Email", false, Alignment::Horizontal, |b| {
@@ -144,15 +140,15 @@ fn build(b: &mut Builder, settings: &mut Settings) {
         b.group("", false, Alignment::Vertical, |b| {
             b.slider(
                 "Volume2",
-                settings.min_vol,
-                settings.max_vol,
-                &mut settings.current_vol,
+                app_state.settings.min_vol,
+                app_state.settings.max_vol,
+                &mut app_state.settings.current_vol,
             );
             b.slider(
                 "Brightness",
-                settings.min_vol,
-                settings.max_vol,
-                &mut settings.current_vol,
+                app_state.settings.min_vol,
+                app_state.settings.max_vol,
+                &mut app_state.settings.current_vol,
             );
             b.select("Items", &["OPtion 1", "Option 2", "option 3"], &mut 1);
             b.progress_bar("Progress bar 1", "Some text", &mut 0);

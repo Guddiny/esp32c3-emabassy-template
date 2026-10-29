@@ -2,32 +2,24 @@ use cc1101_embassy::{Cc1101, Modulation, RadioConfig, TxPower};
 use defmt::{error, info};
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::Spawner;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::mutex::Mutex;
 use embassy_time::{Duration, Timer};
-use esp_hal::{
-    Async,
-    gpio::{Input, InputConfig, Level, Output, OutputConfig},
-    peripherals::{GPIO0, GPIO4, GPIO10, SPI2},
-    spi::master::{Config, Spi},
-};
+use esp_hal::Async;
+use esp_hal::gpio::{Input, InputConfig, Level, Output, OutputConfig};
+use esp_hal::spi::master::{Config, Spi};
 use heapless::String;
 use static_cell::StaticCell;
 
-use crate::notifications::{Notification, NotificationKind};
-use crate::state::Settings;
+use crate::app::state::Settings;
+use crate::board::board::RadioSpiPins;
+use crate::services::notifications::{Messaging, MessageKind};
 
-type RadioSpiBus = Spi<'static, Async>;
-
-static RADIO_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, RadioSpiBus>> = StaticCell::new();
+static RADIO_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, Spi<'static, Async>>> =
+    StaticCell::new();
 static SETTINGS: StaticCell<Settings> = StaticCell::new();
 
-pub fn start_rf_sensor(
-    spawner: Spawner,
-    spi_peripheral: SPI2<'static>,
-    cs_pin: GPIO10<'static>,
-    gdo0_pin: GPIO4<'static>,
-    gdo2_pin: GPIO0<'static>,
-) {
+pub fn start_rf_sensor(spawner: Spawner, radio: RadioSpiPins) {
     // #define SS_CS_PIN 10
     // #define SCK_PIN 6
     // #define MOSI_PIN 7
@@ -35,13 +27,13 @@ pub fn start_rf_sensor(
     // #define GD0 4
     // #define GD2 0
 
-    let spi = Spi::new(spi_peripheral, Config::default())
+    let spi = Spi::new(radio.spi.0, Config::default())
         .unwrap()
         .into_async();
     let spi_bus = RADIO_SPI_BUS.init(Mutex::new(spi));
-    let cs_pin = Output::new(cs_pin, Level::High, OutputConfig::default());
-    let gdo0 = Input::new(gdo0_pin, InputConfig::default());
-    let gdo2 = Input::new(gdo2_pin, InputConfig::default());
+    let cs_pin = Output::new(radio.cs.0, Level::High, OutputConfig::default());
+    let gdo0 = Input::new(radio.gdo0.0, InputConfig::default());
+    let gdo2 = Input::new(radio.gdo2.0, InputConfig::default());
 
     let settings: &mut Settings = SETTINGS.init(Settings {
         led_enabled: false,
@@ -56,7 +48,7 @@ pub fn start_rf_sensor(
 
 #[embassy_executor::task]
 async fn rf_sensor_task(
-    spi_bus: &'static Mutex<CriticalSectionRawMutex, RadioSpiBus>,
+    spi_bus: &'static Mutex<CriticalSectionRawMutex, Spi<'static, Async>>,
     cs_pin: Output<'static>,
     gdo0: Input<'static>,
     gdo2: Input<'static>,
@@ -87,12 +79,12 @@ async fn rf_sensor_task(
     loop {
         info!("Sensor task");
 
-        let n = Notification::new(
-            NotificationKind::Error,
+        let n = Messaging::new(
+            MessageKind::Error,
             "Some error during device RF sensor",
         );
-        let p = crate::notifications::OutboundPackage::Notification(&n);
-        Notification::publish(&p).await;
+        let p = crate::services::notifications::OutboundPackage::Notification(&n);
+        Messaging::publish(&p).await;
 
         Timer::after(Duration::from_secs(5)).await;
     }

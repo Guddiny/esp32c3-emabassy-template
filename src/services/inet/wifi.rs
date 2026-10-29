@@ -4,24 +4,22 @@ use defmt::{error, info};
 use embassy_executor::Spawner;
 use embassy_net::{Runner, Stack, StackResources, StaticConfigV4};
 use embassy_time::{Duration, Timer};
-use esp_hal::peripherals::WIFI;
-use esp_radio::wifi::{
-    AuthenticationMethodConfig,
-    ap::{AccessPointConfig, EventInfo},
-};
+use esp_radio::wifi::AuthenticationMethodConfig;
+use esp_radio::wifi::ap::{AccessPointConfig, EventInfo};
 use static_cell::StaticCell;
 
-use crate::config;
+use crate::app::config;
+use crate::board::board::Wifi;
 
 // One socket per web task plus one UDP socket for the DHCP server.
 static STACK_RESOURCES: StaticCell<StackResources<{ config::WEB_STACK_SIZE }>> = StaticCell::new();
 
-pub async fn start_wifi(spawner: Spawner, peripherals_wifi: WIFI<'static>) -> Stack<'static> {
+pub async fn start_wifi(spawner: Spawner, peripherals_wifi: Wifi) -> Stack<'static> {
     let ap_ip: core::net::Ipv4Addr =
         core::net::Ipv4Addr::from_str(config::WIFI_AP_STATIC_IP).unwrap();
 
     let wifi_controller =
-        esp_radio::wifi::WifiController::new(peripherals_wifi, Default::default())
+        esp_radio::wifi::WifiController::new(peripherals_wifi.0, Default::default())
             .expect("Failed to initialize Wi-Fi controller");
     let wifi_interface = esp_radio::wifi::Interface::access_point();
 
