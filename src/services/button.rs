@@ -5,7 +5,7 @@ use esp_hal::gpio::{Input, InputConfig};
 use heapless::String;
 
 use crate::board::board::ButtonPin;
-use crate::services::notifications::{Log, LogLevel, Notification, OutboundPackage};
+use crate::services::notifications::{Log, LogLevel, Messaging, OutboundPackage};
 use crate::services::led::{LED_CHANNEL, LedSignal};
 
 pub fn start_button_driver(spawner: Spawner, button_pin: ButtonPin) {
@@ -28,7 +28,7 @@ async fn button_service(mut button: Input<'static>) {
                 message: String::try_from("New log message ").unwrap(),
             };
             let pkg = OutboundPackage::Log(&log);
-            Notification::publish(&pkg).await;
+            Messaging::publish(&pkg).await;
             match LED_CHANNEL.try_send(LedSignal::OK) {
                 Ok(_) => info!("LED message sent"),
                 Err(e) => error!("{:?}", defmt::Debug2Format(&e)),

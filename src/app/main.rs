@@ -16,7 +16,7 @@ use esp_println as _;
 use heapless::String;
 use my_esp::app::state::{AppState, Settings, State};
 use my_esp::board::board::Board;
-use my_esp::services::notifications::{Notification, OutboundPackage};
+use my_esp::services::notifications::{Messaging, OutboundPackage};
 use my_esp::services::ui::funcui::{ACTION_CHANNEL, Alignment, Builder, InputType, REDRAW_UI};
 use my_esp::services::*;
 
@@ -95,7 +95,7 @@ async fn main(spawner: Spawner) -> ! {
 
         let pkg = OutboundPackage::Data(builder.packet.as_slice());
 
-        Notification::publish(&pkg).await;
+        Messaging::publish(&pkg).await;
     }
 }
 

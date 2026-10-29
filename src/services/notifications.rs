@@ -7,7 +7,7 @@ use serde::Serialize;
 use crate::app::config::*;
 use crate::services::ui::funcui::Widget;
 
-pub static NOTIFICATIONS_CHANNEL: Channel<CriticalSectionRawMutex, Notification, 4> =
+pub static NOTIFICATIONS_CHANNEL: Channel<CriticalSectionRawMutex, Messaging, 4> =
     Channel::new();
 pub static PACKET_CHANNEL: Channel<CriticalSectionRawMutex, Vec<u8, MAX_PACKET_SIZE>, 4> =
     Channel::new();
@@ -34,21 +34,21 @@ pub enum OutboundPackage<'a> {
     #[serde(rename = "data")]
     Data(&'a [Widget]),
     #[serde(rename = "notification")]
-    Notification(&'a Notification),
+    Notification(&'a Messaging),
     #[serde(rename = "log")]
     Log(&'a Log),
 }
 
 #[derive(Serialize)]
-pub struct Notification {
+pub struct Messaging {
     #[serde(rename = "kind")]
-    pub kind: NotificationKind,
+    pub kind: MessageKind,
     #[serde(rename = "message")]
     pub message: String<64>,
 }
 
 #[derive(Serialize)]
-pub enum NotificationKind {
+pub enum MessageKind {
     #[serde(rename = "info")]
     Info,
     #[serde(rename = "warning")]
@@ -57,8 +57,8 @@ pub enum NotificationKind {
     Error,
 }
 
-impl Notification {
-    pub fn new(kind: NotificationKind, message: &str) -> Self {
+impl Messaging {
+    pub fn new(kind: MessageKind, message: &str) -> Self {
         Self {
             kind,
             message: String::try_from(message).unwrap(),
@@ -66,7 +66,7 @@ impl Notification {
     }
 
     pub async fn publish(notification: &OutboundPackage<'_>) {
-        let packet = match Notification::serialize_package(notification) {
+        let packet = match Messaging::serialize_package(notification) {
             Ok(packet) => packet,
             Err(err) => {
                 error!("JSON serialize failed: {:?}", defmt::Debug2Format(&err));
