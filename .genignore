@@ -1,0 +1,16 @@
+# Files that are never copied into generated projects.
+
+# Build artifacts
+target/
+
+# Generated projects create their own lock file
+Cargo.lock
+
+# Editor / OS noise
+.vscode/
+.zed/
+**/.DS_Store
+
+# Template tooling itself
+cargo-generate.toml
+.genignore

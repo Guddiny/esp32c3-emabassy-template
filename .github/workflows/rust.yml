@@ -1,20 +1,32 @@
-name: Rust
+name: Template
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "*" ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  generate-and-build:
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
+
+    # The template itself is not buildable (Cargo.toml contains {{crate_name}}),
+    # so CI generates a project from it and builds that.
+    - name: Install Rust toolchain
+      run: rustup show active-toolchain
+
+    - name: Install cargo-generate
+      uses: taiki-e/install-action@cargo-generate
+
+    - name: Generate project from template
+      run: cargo generate --path . --name ci_template --destination /tmp --silent
+
+    - name: Build generated project
+      run: cargo build --release --manifest-path /tmp/ci_template/Cargo.toml

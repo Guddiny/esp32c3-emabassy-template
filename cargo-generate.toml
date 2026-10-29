@@ -1,0 +1,21 @@
+# cargo-generate configuration.
+#
+# This repository is a project template. Only the crate name is parameterized;
+# the target chip (esp32c3) and toolchain are fixed.
+#
+# Usage:
+#   cargo generate --path . --name my-firmware
+#   cargo generate --git <repo-url> --name my-firmware
+#
+# `crate_name` is a cargo-generate built-in placeholder derived from the
+# project name (snake_case). It is used in `Cargo.toml` and in
+# `src/app/main.rs` (`use {{crate_name}}::...`).
+#
+# Note: `exclude` means "copy verbatim, do not run template substitution".
+# Files that should not be copied at all go into `.genignore`.
+
+[template]
+exclude = [
+    # Binary assets referenced by README.md
+    "assets/**",
+]

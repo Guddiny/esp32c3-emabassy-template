@@ -1,11 +1,11 @@
 [package]
 edition      = "2024"
-name         = "my_esp"
+name         = "{{crate_name}}"
 rust-version = "1.95"
 version      = "0.1.0"
 
 [[bin]]
-name = "my_esp"
+name = "{{crate_name}}"
 path = "./src/app/main.rs"
 
 [dependencies]
