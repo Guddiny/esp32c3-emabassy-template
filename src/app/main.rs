@@ -13,7 +13,7 @@ use embassy_futures::select::*;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
-use heapless::String;
+use heapless::{String, Vec};
 use my_esp::app::state::{AppState, Settings, State};
 use my_esp::board::board::Board;
 use my_esp::services::notifications::{Messaging, OutboundPackage};

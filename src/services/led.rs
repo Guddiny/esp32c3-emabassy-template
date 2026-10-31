@@ -36,7 +36,7 @@ async fn led_task(mut led: Output<'static>) {
 
     loop {
         let signal = receiver.receive().await;
-        info!("Message received");
+        //info!("Message received");
         for _ in 0..signal.blink_count() {
             led.set_low();
             Timer::after(Duration::from_millis(50)).await;
