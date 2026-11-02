@@ -9,7 +9,7 @@ use esp_hal::usb::usb_serial_jtag::{UsbSerialJtag, UsbSerialJtagRx, UsbSerialJta
 use heapless::Vec;
 use wake::{Decode, Encode, Packet};
 
-use crate::board::board::UsbSerial;
+use crate::board::UsbSerial;
 use crate::services::led::{LED_CHANNEL, LedSignal};
 
 pub static USB_CHANNEL: Channel<CriticalSectionRawMutex, Packet, 10> = Channel::new();

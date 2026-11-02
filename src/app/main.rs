@@ -15,7 +15,7 @@ use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
 use heapless::{String, Vec};
 use my_esp::app::state::{AppState, Settings, State};
-use my_esp::board::board::Board;
+use my_esp::board::Board;
 use my_esp::services::notifications::{Messaging, OutboundPackage};
 use my_esp::services::ui::funcui::{ACTION_CHANNEL, Alignment, Builder, InputType, REDRAW_UI};
 use my_esp::services::*;

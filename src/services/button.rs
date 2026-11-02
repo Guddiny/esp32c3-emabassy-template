@@ -4,9 +4,9 @@ use embassy_time::{Duration, Timer};
 use esp_hal::gpio::{Input, InputConfig};
 use heapless::String;
 
-use crate::board::board::ButtonPin;
-use crate::services::notifications::{Log, LogLevel, Messaging, OutboundPackage};
+use crate::board::ButtonPin;
 use crate::services::led::{LED_CHANNEL, LedSignal};
+use crate::services::notifications::{Log, LogLevel, Messaging, OutboundPackage};
 
 pub fn start_button_driver(spawner: Spawner, button_pin: ButtonPin) {
     let button = Input::new(button_pin.0, InputConfig::default());

@@ -12,7 +12,7 @@ use heapless::String;
 use static_cell::StaticCell;
 
 use crate::app::state::Settings;
-use crate::board::board::RadioSpiPins;
+use crate::board::RadioSpiPins;
 use crate::services::notifications::{MessageKind, Messaging, OutboundPackage};
 
 static RADIO_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, Spi<'static, Async>>> =

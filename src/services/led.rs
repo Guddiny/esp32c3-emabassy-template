@@ -5,7 +5,7 @@ use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
 use esp_hal::gpio::{Level, Output, OutputConfig};
 
-use crate::board::board::LedPin;
+use crate::board::LedPin;
 
 pub static LED_CHANNEL: Channel<CriticalSectionRawMutex, LedSignal, 4> = Channel::new();
 
@@ -36,7 +36,7 @@ async fn led_task(mut led: Output<'static>) {
 
     loop {
         let signal = receiver.receive().await;
-        //info!("Message received");
+        info!("Message received");
         for _ in 0..signal.blink_count() {
             led.set_low();
             Timer::after(Duration::from_millis(50)).await;

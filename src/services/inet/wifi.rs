@@ -9,10 +9,11 @@ use esp_radio::wifi::ap::{AccessPointConfig, EventInfo};
 use static_cell::StaticCell;
 
 use crate::app::config;
-use crate::board::board::Wifi;
+use crate::board::Wifi;
 
 // One socket per web task plus one UDP socket for the DHCP server.
-static STACK_RESOURCES: StaticCell<StackResources<{ config::wlan::WEB_STACK_SIZE }>> = StaticCell::new();
+static STACK_RESOURCES: StaticCell<StackResources<{ config::wlan::WEB_STACK_SIZE }>> =
+    StaticCell::new();
 
 pub async fn start_wifi(spawner: Spawner, peripherals_wifi: Wifi) -> Stack<'static> {
     let ap_ip: core::net::Ipv4Addr =
