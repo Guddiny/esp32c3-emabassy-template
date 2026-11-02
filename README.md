@@ -44,3 +44,9 @@ fn build(b: &mut Builder, settings: &mut Settings) {
     })
 }
 ```
+
+# Notes
+https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples - examples
+// generator version: 1.4.0
+// generator parameters: -o esp32c3 -o esp32c3-mini-1 -o unstable-hal -o embassy -o defmt -o esp-backtrace -o ci -o zed -o vscode -o nightly-aarch64-apple-darwin
+
