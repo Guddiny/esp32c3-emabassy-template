@@ -1709,6 +1709,7 @@ dependencies = [
  "serde",
  "serde-json-core 0.7.0",
  "static_cell",
+ "wake",
 ]
 
 [[package]]
@@ -2436,6 +2437,15 @@ name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
+
+[[package]]
+name = "wake"
+version = "0.1.0"
+source = "git+https://github.com/Guddiny/wake-rs-nostd?branch=main#3fb0360f85ddf903825368003ce8a73de866f121"
+dependencies = [
+ "defmt 1.1.1",
+ "heapless 0.9.3",
+]
 
 [[package]]
 name = "winapi-util"

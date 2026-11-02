@@ -1,8 +1,10 @@
+[workspace]
+
 [package]
-edition      = "2024"
-name         = "my_esp"
+edition = "2024"
+name = "my_esp"
 rust-version = "1.95"
-version      = "0.1.0"
+version = "0.1.0"
 
 [[bin]]
 name = "my_esp"
@@ -21,7 +23,7 @@ esp-rtos = { version = "0.4.0", features = [
   "esp32c3",
 ] }
 
-defmt                  = "1.0.1"
+defmt = "1.0.1"
 esp-bootloader-esp-idf = { version = "0.6.0", features = ["defmt", "esp32c3"] }
 
 embassy-net = { version = "0.9.1", features = [
@@ -59,11 +61,13 @@ serde = { version = "1", default-features = false, features = ["derive"] }
 serde-json-core = "0.7.0"
 
 critical-section = "1.2.0"
-static_cell      = "2.1.1"
+static_cell = "2.1.1"
 heapless = "0.9.3"
 
 cc1101-embassy = "0.1.0"
 
+wake = { git = "https://github.com/Guddiny/wake-rs-nostd", branch = "main", features = ["defmt"] }
+# wake = { path = "../wake-rs-nostd", features = ["defmt"] }
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.dev]
@@ -72,10 +76,10 @@ cc1101-embassy = "0.1.0"
 opt-level = "s"
 
 [profile.release]
-codegen-units = 1     # LLVM can perform better optimizations using a single thread
-debug         = 2     # prefer slower builds but better debugging experience
-lto           = 'fat'
-opt-level     = 's'
+codegen-units = 1 # LLVM can perform better optimizations using a single thread
+debug = 2         # prefer slower builds but better debugging experience
+lto = 'fat'
+opt-level = 's'
 
 [features]
 default = ["board-esp32c3-mini-1"]

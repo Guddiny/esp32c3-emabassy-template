@@ -5,7 +5,7 @@ use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
 use esp_hal::gpio::{Level, Output, OutputConfig};
 
-use crate::board::board::LedPin;
+use crate::board::LedPin;
 
 pub static LED_CHANNEL: Channel<CriticalSectionRawMutex, LedSignal, 4> = Channel::new();
 

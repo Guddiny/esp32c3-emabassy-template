@@ -13,9 +13,9 @@ use embassy_futures::select::*;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_println as _;
-use heapless::String;
+use heapless::{String, Vec};
 use my_esp::app::state::{AppState, Settings, State};
-use my_esp::board::board::Board;
+use my_esp::board::Board;
 use my_esp::services::notifications::{Messaging, OutboundPackage};
 use my_esp::services::ui::funcui::{ACTION_CHANNEL, Alignment, Builder, InputType, REDRAW_UI};
 use my_esp::services::*;
@@ -58,6 +58,7 @@ async fn main(spawner: Spawner) -> ! {
     radio::start_rf_sensor(spawner, board.radio);
     led::start_led_driver(spawner, board.led);
     button::start_button_driver(spawner, board.button);
+    usb::start_usb_driver(spawner, board.usb);
 
     let mut app_state = AppState {
         settings: Settings {

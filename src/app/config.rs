@@ -1,20 +1,25 @@
-pub const WIFI_AP_SSID: &str = "esp32c3m";
-pub const WIFI_AP_PASSW: &str = "12345678";
+pub mod wlan {
+    pub const WIFI_AP_SSID: &str = "esp32c3m";
+    pub const WIFI_AP_PASSW: &str = "12345678";
 
-pub const WIFI_AP_STATIC_IP: &str = "192.168.4.1";
-pub const WIFI_AP_GATEWAY_START_IP: u8 = 100;
-pub const WIFI_AP_GATEWAY_END_IP: u8 = 115;
+    pub const WIFI_AP_STATIC_IP: &str = "192.168.4.1";
+    pub const WIFI_AP_GATEWAY_START_IP: u8 = 100;
+    pub const WIFI_AP_GATEWAY_END_IP: u8 = 115;
+    pub const HTTP_SERVER_PORT: u16 = 80;
 
-pub const HTTP_SERVER_PORT: u16 = 80;
-pub const WEB_TASK_POOL_SIZE: usize = 3;
-pub const DHCP_SOCKET_SIZE: usize = 1;
-pub const MAX_CONCURRENT_WEBSOCKETS: usize = 2;
-pub const HEADROOM: usize = 1;
-pub const WEB_STACK_SIZE: usize =
-    WEB_TASK_POOL_SIZE + DHCP_SOCKET_SIZE + MAX_CONCURRENT_WEBSOCKETS + HEADROOM;
-pub const MAX_PACKET_SIZE: usize = 1024 * 4;
-pub const MAX_NOTIFICATION_PACKET_SIZE: usize = 512;
-pub const PARENT_STACK_SIZE: usize = 100;
-pub const MAX_SELECT_OPTIONS: usize = 10;
-pub const MAX_WIDGETS: usize = 40;
-pub const MAX_UI_DEPTH: usize = 8;
+    pub const WEB_TASK_POOL_SIZE: usize = 3;
+    pub const DHCP_SOCKET_SIZE: usize = 1;
+    pub const MAX_CONCURRENT_WEBSOCKETS: usize = 2;
+    pub const HEADROOM: usize = 1;
+    pub const WEB_STACK_SIZE: usize =
+        WEB_TASK_POOL_SIZE + DHCP_SOCKET_SIZE + MAX_CONCURRENT_WEBSOCKETS + HEADROOM;
+}
+
+pub mod ui {
+    pub const MAX_PACKET_SIZE: usize = 1024 * 4;
+    pub const MAX_NOTIFICATION_PACKET_SIZE: usize = 512;
+    pub const PARENT_STACK_SIZE: usize = 100;
+    pub const MAX_SELECT_OPTIONS: usize = 10;
+    pub const MAX_WIDGETS: usize = 40;
+    pub const MAX_UI_DEPTH: usize = 8;
+}

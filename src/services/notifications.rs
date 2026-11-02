@@ -4,7 +4,7 @@ use embassy_sync::channel::Channel;
 use heapless::{String, Vec};
 use serde::Serialize;
 
-use crate::app::config::*;
+use crate::app::config::ui::*;
 use crate::services::ui::funcui::Widget;
 
 pub static NOTIFICATIONS_CHANNEL: Channel<CriticalSectionRawMutex, Messaging, 4> =
